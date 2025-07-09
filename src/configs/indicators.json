@@ -1,0 +1,585 @@
+{
+    "technicalIndicators": {
+      "rsi": {
+        "name": "Relative Strength Index",
+        "enabled": true,
+        "timeframes": ["1m", "5m", "15m"],
+        "parameters": {
+          "period": 14,
+          "overbought": 70,
+          "oversold": 30,
+          "extremeOverbought": 80,
+          "extremeOversold": 20
+        },
+        "signals": {
+          "bullish": {
+            "oversoldBounce": {
+              "condition": "rsi < oversold && rising",
+              "strength": 0.7
+            },
+            "divergenceBullish": {
+              "condition": "price declining && rsi rising",
+              "strength": 0.8
+            }
+          },
+          "bearish": {
+            "overboughtDecline": {
+              "condition": "rsi > overbought && falling",
+              "strength": 0.7
+            },
+            "divergenceBearish": {
+              "condition": "price rising && rsi falling",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.3
+      },
+  
+      "macd": {
+        "name": "Moving Average Convergence Divergence",
+        "enabled": true,
+        "timeframes": ["1m", "5m"],
+        "parameters": {
+          "fastPeriod": 12,
+          "slowPeriod": 26,
+          "signalPeriod": 9,
+          "histogramThreshold": 0.1
+        },
+        "signals": {
+          "bullish": {
+            "bullishCrossover": {
+              "condition": "macd crosses above signal",
+              "strength": 0.8
+            },
+            "histogramIncreasing": {
+              "condition": "histogram > 0 && increasing",
+              "strength": 0.6
+            },
+            "zeroLineCross": {
+              "condition": "macd crosses above zero",
+              "strength": 0.9
+            }
+          },
+          "bearish": {
+            "bearishCrossover": {
+              "condition": "macd crosses below signal",
+              "strength": 0.8
+            },
+            "histogramDecreasing": {
+              "condition": "histogram < 0 && decreasing",
+              "strength": 0.6
+            },
+            "zeroLineCross": {
+              "condition": "macd crosses below zero",
+              "strength": 0.9
+            }
+          }
+        },
+        "weight": 0.25
+      },
+  
+      "bollingerBands": {
+        "name": "Bollinger Bands",
+        "enabled": true,
+        "timeframes": ["1m", "5m"],
+        "parameters": {
+          "period": 20,
+          "standardDeviations": 2,
+          "squeezeThreshold": 0.1,
+          "bandwidthThreshold": 0.05
+        },
+        "signals": {
+          "bullish": {
+            "bandBounce": {
+              "condition": "price touches lower band && volume spike",
+              "strength": 0.7
+            },
+            "squeezeBreakout": {
+              "condition": "bandwidth expanding && price > upper band",
+              "strength": 0.9
+            },
+            "meanReversion": {
+              "condition": "price below middle && rising",
+              "strength": 0.5
+            }
+          },
+          "bearish": {
+            "bandBounce": {
+              "condition": "price touches upper band && volume spike",
+              "strength": 0.7
+            },
+            "squeezeBreakout": {
+              "condition": "bandwidth expanding && price < lower band",
+              "strength": 0.9
+            },
+            "meanReversion": {
+              "condition": "price above middle && falling",
+              "strength": 0.5
+            }
+          }
+        },
+        "weight": 0.2
+      },
+  
+      "volume": {
+        "name": "Volume Analysis",
+        "enabled": true,
+        "timeframes": ["1m", "5m"],
+        "parameters": {
+          "movingAveragePeriod": 20,
+          "spikeThreshold": 2.0,
+          "dryUpThreshold": 0.5,
+          "accumDistPeriod": 14
+        },
+        "signals": {
+          "bullish": {
+            "volumeSpike": {
+              "condition": "volume > average * spikeThreshold && price rising",
+              "strength": 0.8
+            },
+            "volumeConfirmation": {
+              "condition": "price rising && volume > average",
+              "strength": 0.6
+            },
+            "accumulation": {
+              "condition": "accumDist rising && price stable",
+              "strength": 0.7
+            }
+          },
+          "bearish": {
+            "volumeSpike": {
+              "condition": "volume > average * spikeThreshold && price falling",
+              "strength": 0.8
+            },
+            "volumeConfirmation": {
+              "condition": "price falling && volume > average",
+              "strength": 0.6
+            },
+            "distribution": {
+              "condition": "accumDist falling && price stable",
+              "strength": 0.7
+            }
+          }
+        },
+        "weight": 0.15
+      },
+  
+      "stochastic": {
+        "name": "Stochastic Oscillator",
+        "enabled": true,
+        "timeframes": ["1m", "5m"],
+        "parameters": {
+          "kPeriod": 14,
+          "dPeriod": 3,
+          "smoothing": 3,
+          "overbought": 80,
+          "oversold": 20
+        },
+        "signals": {
+          "bullish": {
+            "oversoldCrossover": {
+              "condition": "%K crosses above %D && %K < oversold",
+              "strength": 0.7
+            },
+            "divergence": {
+              "condition": "price declining && %K rising",
+              "strength": 0.8
+            }
+          },
+          "bearish": {
+            "overboughtCrossover": {
+              "condition": "%K crosses below %D && %K > overbought",
+              "strength": 0.7
+            },
+            "divergence": {
+              "condition": "price rising && %K falling",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.1
+      },
+  
+      "williams": {
+        "name": "Williams %R",
+        "enabled": true,
+        "timeframes": ["1m"],
+        "parameters": {
+          "period": 14,
+          "overbought": -20,
+          "oversold": -80
+        },
+        "signals": {
+          "bullish": {
+            "oversoldReversal": {
+              "condition": "williams < oversold && rising",
+              "strength": 0.6
+            }
+          },
+          "bearish": {
+            "overboughtReversal": {
+              "condition": "williams > overbought && falling",
+              "strength": 0.6
+            }
+          }
+        },
+        "weight": 0.05
+      }
+    },
+  
+    "customIndicators": {
+      "velocityIndex": {
+        "name": "Price Velocity Index",
+        "enabled": true,
+        "parameters": {
+          "period": 10,
+          "smoothing": 3
+        },
+        "calculation": "rate_of_change * volume_weight",
+        "signals": {
+          "bullish": {
+            "acceleration": {
+              "condition": "velocity > 0 && accelerating",
+              "strength": 0.8
+            }
+          },
+          "bearish": {
+            "deceleration": {
+              "condition": "velocity < 0 && decelerating",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.1
+      },
+  
+      "microTrendDetector": {
+        "name": "Micro Trend Detector",
+        "enabled": true,
+        "parameters": {
+          "shortPeriod": 5,
+          "longPeriod": 20,
+          "trendThreshold": 0.002
+        },
+        "calculation": "slope_analysis + momentum_confirmation",
+        "signals": {
+          "bullish": {
+            "microUptrend": {
+              "condition": "short_slope > threshold && long_slope > 0",
+              "strength": 0.7
+            }
+          },
+          "bearish": {
+            "microDowntrend": {
+              "condition": "short_slope < -threshold && long_slope < 0",
+              "strength": 0.7
+            }
+          }
+        },
+        "weight": 0.15
+      },
+  
+      "orderFlowIndicator": {
+        "name": "Order Flow Momentum",
+        "enabled": true,
+        "parameters": {
+          "period": 10,
+          "imbalanceThreshold": 0.6,
+          "volumeThreshold": 1.5
+        },
+        "calculation": "bid_ask_ratio * volume_delta",
+        "signals": {
+          "bullish": {
+            "buyPressure": {
+              "condition": "bid_volume > ask_volume * imbalanceThreshold",
+              "strength": 0.8
+            }
+          },
+          "bearish": {
+            "sellPressure": {
+              "condition": "ask_volume > bid_volume * imbalanceThreshold",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.2
+      }
+    },
+  
+    "arbitrageIndicators": {
+      "priceDiscrepancy": {
+        "name": "Cross-Exchange Price Discrepancy",
+        "enabled": true,
+        "parameters": {
+          "minDiscrepancy": 0.15,
+          "maxDiscrepancy": 5.0,
+          "exchanges": ["uniswap", "sushiswap", "1inch"]
+        },
+        "signals": {
+          "opportunity": {
+            "crossExchangeArb": {
+              "condition": "price_diff > minDiscrepancy && liquidity_sufficient",
+              "strength": 0.9
+            }
+          }
+        },
+        "weight": 0.3
+      },
+  
+      "crossChainSpread": {
+        "name": "Cross-Chain Price Spread",
+        "enabled": true,
+        "parameters": {
+          "minSpread": 0.2,
+          "bridgeFeeBuffer": 0.05,
+          "chains": ["ethereum", "arbitrum", "optimism", "base"]
+        },
+        "signals": {
+          "opportunity": {
+            "crossChainArb": {
+              "condition": "spread > minSpread + bridgeFee + buffer",
+              "strength": 0.9
+            }
+          }
+        },
+        "weight": 0.3
+      },
+  
+      "triangularArbitrage": {
+        "name": "Triangular Arbitrage Detector",
+        "enabled": true,
+        "parameters": {
+          "minProfit": 0.1,
+          "pairs": [
+            ["BTC/USDT", "ETH/BTC", "ETH/USDT"],
+            ["ETH/USDT", "SOL/ETH", "SOL/USDT"]
+          ]
+        },
+        "signals": {
+          "opportunity": {
+            "triangularArb": {
+              "condition": "calculated_profit > minProfit",
+              "strength": 0.85
+            }
+          }
+        },
+        "weight": 0.25
+      }
+    },
+  
+    "sentimentIndicators": {
+      "socialSentiment": {
+        "name": "Social Media Sentiment",
+        "enabled": true,
+        "parameters": {
+          "sources": ["twitter", "reddit", "telegram"],
+          "updateInterval": 60,
+          "keywords": ["bullish", "bearish", "moon", "dump", "pump"]
+        },
+        "signals": {
+          "bullish": {
+            "positiveSentiment": {
+              "condition": "sentiment_score > 0.7",
+              "strength": 0.6
+            },
+            "sentimentMomentum": {
+              "condition": "sentiment_score rising && volume increasing",
+              "strength": 0.8
+            }
+          },
+          "bearish": {
+            "negativeSentiment": {
+              "condition": "sentiment_score < 0.3",
+              "strength": 0.6
+            },
+            "sentimentMomentum": {
+              "condition": "sentiment_score falling && volume increasing",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.15
+      },
+  
+      "newsImpact": {
+        "name": "News Impact Analysis",
+        "enabled": true,
+        "parameters": {
+          "sources": ["coindesk", "cointelegraph", "bloomberg"],
+          "impactThreshold": 0.8,
+          "decayRate": 0.1
+        },
+        "signals": {
+          "bullish": {
+            "positiveNews": {
+              "condition": "news_sentiment > impactThreshold",
+              "strength": 0.9
+            }
+          },
+          "bearish": {
+            "negativeNews": {
+              "condition": "news_sentiment < -impactThreshold",
+              "strength": 0.9
+            }
+          }
+        },
+        "weight": 0.2
+      }
+    },
+  
+    "marketStructureIndicators": {
+      "supportResistance": {
+        "name": "Dynamic Support/Resistance",
+        "enabled": true,
+        "parameters": {
+          "lookbackPeriod": 100,
+          "minTouches": 3,
+          "strengthThreshold": 0.002
+        },
+        "signals": {
+          "bullish": {
+            "supportBounce": {
+              "condition": "price near support && volume spike",
+              "strength": 0.8
+            },
+            "resistanceBreak": {
+              "condition": "price breaks resistance && volume confirmation",
+              "strength": 0.9
+            }
+          },
+          "bearish": {
+            "supportBreak": {
+              "condition": "price breaks support && volume confirmation",
+              "strength": 0.9
+            },
+            "resistanceReject": {
+              "condition": "price rejected at resistance && volume spike",
+              "strength": 0.8
+            }
+          }
+        },
+        "weight": 0.2
+      },
+  
+      "liquidityPools": {
+        "name": "Liquidity Pool Analysis",
+        "enabled": true,
+        "parameters": {
+          "minLiquidity": 100000,
+          "depthAnalysis": true,
+          "impactThreshold": 0.5
+        },
+        "signals": {
+          "bullish": {
+            "liquidityIncrease": {
+              "condition": "pool_liquidity increasing && spreads tightening",
+              "strength": 0.7
+            }
+          },
+          "bearish": {
+            "liquidityDecrease": {
+              "condition": "pool_liquidity decreasing && spreads widening",
+              "strength": 0.7
+            }
+          }
+        },
+        "weight": 0.15
+      }
+    },
+  
+    "riskIndicators": {
+      "volatilityIndex": {
+        "name": "Dynamic Volatility Index",
+        "enabled": true,
+        "parameters": {
+          "period": 20,
+          "thresholds": {
+            "low": 0.02,
+            "medium": 0.05,
+            "high": 0.08,
+            "extreme": 0.12
+          }
+        },
+        "signals": {
+          "riskAdjustment": {
+            "lowVolatility": {
+              "condition": "volatility < low",
+              "adjustment": "increase_position_size"
+            },
+            "highVolatility": {
+              "condition": "volatility > high",
+              "adjustment": "decrease_position_size"
+            },
+            "extremeVolatility": {
+              "condition": "volatility > extreme",
+              "adjustment": "halt_trading"
+            }
+          }
+        },
+        "weight": 0.3
+      },
+  
+      "correlationMatrix": {
+        "name": "Asset Correlation Matrix",
+        "enabled": true,
+        "parameters": {
+          "period": 50,
+          "pairs": ["BTC/ETH", "ETH/SOL", "BTC/SOL"],
+          "thresholds": {
+            "high": 0.8,
+            "medium": 0.5,
+            "low": 0.2
+          }
+        },
+        "signals": {
+          "riskAdjustment": {
+            "highCorrelation": {
+              "condition": "correlation > high",
+              "adjustment": "reduce_diversification"
+            },
+            "lowCorrelation": {
+              "condition": "correlation < low",
+              "adjustment": "increase_diversification"
+            }
+          }
+        },
+        "weight": 0.2
+      }
+    },
+  
+    "scalingParameters": {
+      "timeframeWeights": {
+        "1s": 0.1,
+        "5s": 0.15,
+        "15s": 0.2,
+        "1m": 0.35,
+        "5m": 0.2
+      },
+      "signalAggregation": {
+        "method": "weighted_average",
+        "convergenceThreshold": 0.7,
+        "divergenceThreshold": 0.3
+      },
+      "adaptiveWeighting": {
+        "enabled": true,
+        "performancePeriod": 1000,
+        "adjustmentFactor": 0.1
+      }
+    },
+  
+    "alertThresholds": {
+      "strongSignal": 0.8,
+      "moderateSignal": 0.6,
+      "weakSignal": 0.4,
+      "conflictingSignals": 0.3
+    },
+  
+    "computation": {
+      "updateFrequency": 1000,
+      "batchSize": 100,
+      "parallelProcessing": true,
+      "cacheResults": true,
+      "cacheTTL": 5000
+    }
+  }

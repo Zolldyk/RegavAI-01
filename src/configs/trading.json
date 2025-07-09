@@ -1,0 +1,208 @@
+{
+    "strategy": {
+      "name": "Enhanced Scalping Strategy",
+      "version": "1.0.0",
+      "description": "Advanced multi-timeframe scalping with arbitrage detection",
+      "type": "SCALPING_ARBITRAGE"
+    },
+    
+    "trading": {
+      "tradingPairs": [
+        "BTC/USDT",
+        "ETH/USDT", 
+        "SOL/USDC",
+        "XRP/USDT",
+        "WETH/USDC",
+        "DOGE/USDT",
+        "WIF/USDT",
+        "SHIB/USDT"
+      ],
+      "maxConcurrentTrades": 5,
+      "basePositionSize": 0.08,
+      "scalingInterval": 2000,
+      "timeframes": ["1s", "5s", "15s", "1m", "5m"]
+    },
+  
+    "thresholds": {
+      "buyThreshold": 0.6,
+      "sellThreshold": -0.6,
+      "confidenceThreshold": 0.5,
+      "signalStrengths": {
+        "weak": 0.3,
+        "moderate": 0.6,
+        "strong": 0.8,
+        "veryStrong": 0.9,
+        "extreme": 0.95
+      }
+    },
+  
+    "riskManagement": {
+      "stopLossPercent": 0.3,
+      "takeProfitPercent": 0.5,
+      "maxDrawdownPercent": 3.0,
+      "positionSizeLimits": {
+        "min": 50,
+        "max": 5000
+      },
+      "volatilityAdjustment": {
+        "enabled": true,
+        "multiplier": 2.0,
+        "minMultiplier": 0.3
+      }
+    },
+  
+    "technicalAnalysis": {
+      "rsi": {
+        "period": 14,
+        "oversold": 30,
+        "overbought": 70,
+        "weight": 0.3
+      },
+      "macd": {
+        "fastPeriod": 12,
+        "slowPeriod": 26,
+        "signalPeriod": 9,
+        "weight": 0.25
+      },
+      "bollingerBands": {
+        "period": 20,
+        "standardDeviations": 2,
+        "weight": 0.2
+      },
+      "volume": {
+        "movingAveragePeriod": 5,
+        "spikeThreshold": 2.0,
+        "weight": 0.15
+      },
+      "momentum": {
+        "rocPeriod": 14,
+        "stochasticPeriod": 14,
+        "weight": 0.1
+      }
+    },
+  
+    "arbitrage": {
+      "enabled": {
+        "crossExchange": true,
+        "crossChain": true,
+        "triangular": true,
+        "temporal": true
+      },
+      "profitThreshold": 0.15,
+      "bridgeFees": {
+        "ethereum": 0.02,
+        "arbitrum": 0.005,
+        "optimism": 0.005,
+        "base": 0.003,
+        "solana": 0.001
+      },
+      "scanInterval": 5000,
+      "maxOpportunities": 10
+    },
+  
+    "marketRegimes": {
+      "detection": {
+        "volatilityThresholds": {
+          "low": 0.02,
+          "high": 0.08
+        },
+        "trendStrengthThreshold": 0.7,
+        "confidenceThreshold": 0.6
+      },
+      "adjustments": {
+        "trending": {
+          "positionMultiplier": 1.2,
+          "intervalMultiplier": 0.7
+        },
+        "ranging": {
+          "positionMultiplier": 1.0,
+          "intervalMultiplier": 1.0
+        },
+        "highVolatility": {
+          "positionMultiplier": 0.7,
+          "intervalMultiplier": 0.5
+        },
+        "lowVolatility": {
+          "positionMultiplier": 1.1,
+          "intervalMultiplier": 2.0
+        }
+      }
+    },
+  
+    "machineLearning": {
+      "enabled": true,
+      "minConfidence": 0.7,
+      "weight": 0.2,
+      "features": {
+        "technical": true,
+        "orderBook": true,
+        "sentiment": true,
+        "marketRegime": true
+      }
+    },
+  
+    "sentiment": {
+      "enabled": true,
+      "weight": 0.15,
+      "sources": ["twitter", "reddit", "news"],
+      "updateInterval": 60000,
+      "thresholds": {
+        "bullish": 0.7,
+        "bearish": 0.3
+      }
+    },
+  
+    "optimization": {
+      "adaptive": {
+        "enabled": true,
+        "interval": 60000,
+        "performanceWindow": 600000
+      },
+      "parameterRanges": {
+        "entryThreshold": [0.4, 0.8],
+        "positionSizeMultiplier": [0.5, 1.5],
+        "stopLossMultiplier": [0.5, 1.5]
+      },
+      "performanceTargets": {
+        "minWinRate": 0.6,
+        "minProfitFactor": 2.0,
+        "maxDrawdown": 3.0
+      }
+    },
+  
+    "execution": {
+      "latencyTarget": 100,
+      "maxRetries": 3,
+      "timeouts": {
+        "trade": 30000,
+        "analysis": 5000,
+        "arbitrage": 10000
+      },
+      "slippage": {
+        "default": 0.5,
+        "highVolatility": 1.0,
+        "lowLiquidity": 1.5
+      }
+    },
+  
+    "competition": {
+      "duration": 3600000,
+      "targetTrades": 50,
+      "profitTarget": 25,
+      "maxLoss": 5,
+      "strategies": {
+        "scalping": 0.4,
+        "arbitrage": 0.3,
+        "sentiment": 0.2,
+        "machineLearning": 0.1
+      }
+    },
+  
+    "logging": {
+      "level": "info",
+      "enableMetrics": true,
+      "enableTrading": true,
+      "enableArbitrage": true,
+      "enablePerformance": true
+    }
+  }

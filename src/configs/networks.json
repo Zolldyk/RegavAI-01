@@ -1,0 +1,300 @@
+{
+    "networks": {
+      "ethereum": {
+        "chainId": 1,
+        "name": "Ethereum Mainnet",
+        "rpcUrl": "https://mainnet.infura.io/v3/${INFURA_API_KEY}",
+        "recallUrl": "https://api.competitions.recall.network",
+        "explorerUrl": "https://etherscan.io",
+        "nativeCurrency": {
+          "name": "Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "contracts": {
+          "registry": "0x74539671a1d2f1c8f200826baba665179f53a1b7",
+          "gateway": "0x77aa40b105843728088c0132e43fc44348881da8",
+          "bucketManager": "0xf7Cd8fa9b94DB2Aa972023b379c7f72c65E4De9D",
+          "creditManager": "0x82C6D3ed4cD33d8EC1E51d0B5Cc1d822Eaa0c3dC"
+        },
+        "tokens": {
+          "WETH": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+          "USDC": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "USDT": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+          "WBTC": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+        },
+        "exchanges": {
+          "uniswapV3": {
+            "router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+            "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+          },
+          "sushiswap": {
+            "router": "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F"
+          }
+        },
+        "bridging": {
+          "enabled": true,
+          "bridges": ["arbitrum", "optimism", "base"],
+          "fees": {
+            "arbitrum": 0.005,
+            "optimism": 0.005,
+            "base": 0.003
+          }
+        },
+        "gasSettings": {
+          "gasLimit": 500000,
+          "maxFeePerGas": "50000000000",
+          "maxPriorityFeePerGas": "2000000000"
+        }
+      },
+  
+      "arbitrum": {
+        "chainId": 42161,
+        "name": "Arbitrum One",
+        "rpcUrl": "https://arbitrum-mainnet.infura.io/v3/${INFURA_API_KEY}",
+        "explorerUrl": "https://arbiscan.io",
+        "nativeCurrency": {
+          "name": "Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "contracts": {
+          "registry": "0x74539671a1d2f1c8f200826baba665179f53a1b7",
+          "gateway": "0x77aa40b105843728088c0132e43fc44348881da8"
+        },
+        "tokens": {
+          "WETH": "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1",
+          "USDC": "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+          "USDT": "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
+          "WBTC": "0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f",
+          "ARB": "0x912CE59144191C1204E64559FE8253a0e49E6548"
+        },
+        "exchanges": {
+          "uniswapV3": {
+            "router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+            "factory": "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+          },
+          "camelot": {
+            "router": "0xc873fEcbd354f5A56E00E710B90EF4201db2448d"
+          }
+        },
+        "gasSettings": {
+          "gasLimit": 800000,
+          "gasPrice": "100000000"
+        }
+      },
+  
+      "optimism": {
+        "chainId": 10,
+        "name": "Optimism",
+        "rpcUrl": "https://optimism-mainnet.infura.io/v3/${INFURA_API_KEY}",
+        "explorerUrl": "https://optimistic.etherscan.io",
+        "nativeCurrency": {
+          "name": "Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "tokens": {
+          "WETH": "0x4200000000000000000000000000000000000006",
+          "USDC": "0x7F5c764cBc14f9669B88837ca1490cCa17c31607",
+          "USDT": "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
+          "WBTC": "0x68f180fcCe6836688e9084f035309E29Bf0A2095",
+          "OP": "0x4200000000000000000000000000000000000042"
+        },
+        "exchanges": {
+          "uniswapV3": {
+            "router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+          },
+          "velodrome": {
+            "router": "0x9c12939390052919aF3155f41Bf4160Fd3666A6e"
+          }
+        },
+        "gasSettings": {
+          "gasLimit": 800000,
+          "gasPrice": "1000000"
+        }
+      },
+  
+      "base": {
+        "chainId": 8453,
+        "name": "Base",
+        "rpcUrl": "https://mainnet.base.org",
+        "explorerUrl": "https://basescan.org",
+        "nativeCurrency": {
+          "name": "Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "tokens": {
+          "WETH": "0x4200000000000000000000000000000000000006",
+          "USDC": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+          "USDT": "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2"
+        },
+        "exchanges": {
+          "uniswapV3": {
+            "router": "0x2626664c2603336E57B271c5C0b26F421741e481",
+            "quoter": "0x3d4e44Eb1374240CE5F1B871ab261CD16335B76a"
+          },
+          "aerodrome": {
+            "router": "0xcF77a3Ba9A5CA399B7c97c74d54e5b1Beb874E43"
+          }
+        },
+        "gasSettings": {
+          "gasLimit": 500000,
+          "gasPrice": "1000000"
+        }
+      },
+  
+      "solana": {
+        "chainId": "mainnet-beta",
+        "name": "Solana Mainnet",
+        "rpcUrl": "https://api.mainnet-beta.solana.com",
+        "explorerUrl": "https://explorer.solana.com",
+        "nativeCurrency": {
+          "name": "Solana",
+          "symbol": "SOL",
+          "decimals": 9
+        },
+        "tokens": {
+          "SOL": "So11111111111111111111111111111111111111112",
+          "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+          "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+          "WIF": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
+          "BONK": "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263"
+        },
+        "exchanges": {
+          "jupiter": {
+            "aggregator": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+          },
+          "raydium": {
+            "ammProgram": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+          },
+          "orca": {
+            "program": "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP"
+          }
+        },
+        "gasSettings": {
+          "computeUnitPrice": 200000,
+          "computeUnitLimit": 400000
+        }
+      },
+  
+      "polygon": {
+        "chainId": 137,
+        "name": "Polygon",
+        "rpcUrl": "https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}",
+        "explorerUrl": "https://polygonscan.com",
+        "nativeCurrency": {
+          "name": "Matic",
+          "symbol": "MATIC",
+          "decimals": 18
+        },
+        "tokens": {
+          "WMATIC": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+          "USDC": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+          "USDT": "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
+          "WETH": "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
+          "WBTC": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6"
+        },
+        "exchanges": {
+          "uniswapV3": {
+            "router": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+            "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6"
+          },
+          "quickswap": {
+            "router": "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
+          }
+        },
+        "gasSettings": {
+          "gasLimit": 500000,
+          "gasPrice": "30000000000"
+        }
+      },
+  
+      "testnet": {
+        "chainId": 11155111,
+        "name": "Sepolia Testnet",
+        "rpcUrl": "https://sepolia.infura.io/v3/${INFURA_API_KEY}",
+        "recallUrl": "https://api.sandbox.competitions.recall.network",
+        "explorerUrl": "https://sepolia.etherscan.io",
+        "nativeCurrency": {
+          "name": "Sepolia Ether",
+          "symbol": "SEP",
+          "decimals": 18
+        },
+        "contracts": {
+          "registry": "0x1234567890123456789012345678901234567890",
+          "gateway": "0x1234567890123456789012345678901234567890"
+        },
+        "tokens": {
+          "WETH": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+          "USDC": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+        },
+        "gasSettings": {
+          "gasLimit": 500000,
+          "gasPrice": "20000000000"
+        }
+      },
+  
+      "localnet": {
+        "chainId": 31337,
+        "name": "Hardhat/Anvil Local",
+        "rpcUrl": "http://127.0.0.1:8545",
+        "recallUrl": "http://127.0.0.1:8645",
+        "explorerUrl": "http://localhost:3000",
+        "nativeCurrency": {
+          "name": "Test Ether",
+          "symbol": "ETH",
+          "decimals": 18
+        },
+        "accounts": {
+          "count": 10,
+          "mnemonic": "test test test test test test test test test test test junk"
+        },
+        "gasSettings": {
+          "gasLimit": 30000000,
+          "gasPrice": "875000000"
+        }
+      }
+    },
+  
+    "defaultNetwork": "ethereum",
+    
+    "gaiaNodes": {
+      "general": "https://llama8b.gaia.domains/v1",
+      "specialized": {
+        "crypto": "https://crypto-analyst.gaia.domains/v1",
+        "trading": "https://trading-expert.gaia.domains/v1",
+        "sentiment": "https://sentiment-analyzer.gaia.domains/v1"
+      }
+    },
+  
+    "vincentConfig": {
+      "baseUrl": "https://api.vincent.network",
+      "policies": {
+        "spending": {
+          "dailyLimit": 1000,
+          "perTransactionLimit": 100,
+          "timeWindow": 86400
+        },
+        "trading": {
+          "maxPositionSize": 0.1,
+          "stopLossRequired": true,
+          "maxLeverage": 1
+        }
+      }
+    },
+  
+    "monitoring": {
+      "enableHealthChecks": true,
+      "checkInterval": 30000,
+      "alertThresholds": {
+        "latency": 1000,
+        "errorRate": 0.05,
+        "gasPrice": 100000000000
+      }
+    }
+  }
