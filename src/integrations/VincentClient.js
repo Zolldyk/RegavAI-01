@@ -7,6 +7,9 @@ import { promisify } from 'util';
 import config from '../utils/Config.js';
 import logger from '../utils/Logger.js';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  enhancedERC20TradingTool
+} from '../vincent/BundledVincentTools.js';
 
 // ============ Constants ============
 const POLICY_TYPES = {
@@ -55,12 +58,12 @@ class VincentClient extends EventEmitter {
     this.policyViolations = [];
     this.spendingLimits = {
       daily: {
-        limit: this.config.dailySpendingLimit || 1000, // $1000 default
+        limit: this.config.dailySpendingLimit || 5000, // $1000 default
         spent: 0,
         resetTime: this._getNextDayReset()
       },
       perTrade: {
-        limit: this.config.maxTradeAmount || 100 // $100 default per trade
+        limit: this.config.maxTradeAmount || 1000 // $100 default per trade
       },
       hourly: {
         limit: this.config.hourlySpendingLimit || 500, // $500 per hour
@@ -242,12 +245,13 @@ class VincentClient extends EventEmitter {
 
     try {
       const walletName = this.config.delegateeWalletName;
-      const walletConfig = config.getWalletConfig();
+      const walletConfig = config.get('wallet'); // Get full wallet config instead of safe version
 
       // ============ Get Private Key from Encrypted Wallet ============
+      const keystorePath = `${process.env.HOME}/.foundry/keystores/${walletName}`;
       const privateKeyCmd = walletConfig.passwordFile
-        ? `cast wallet private-key ${walletName} --password-file ${walletConfig.passwordFile}`
-        : `cast wallet private-key ${walletName} --interactive`;
+        ? `cast wallet private-key --keystore ${keystorePath} --password-file ${walletConfig.passwordFile}`
+        : `cast wallet private-key --keystore ${keystorePath} --interactive`;
 
       const { stdout: privateKey, stderr: pkError } = await execAsync(privateKeyCmd);
 
@@ -256,9 +260,11 @@ class VincentClient extends EventEmitter {
       }
 
       // ============ Get Address from Wallet ============
-      const { stdout: address, stderr: addrError } = await execAsync(
-                `cast wallet address ${walletName}`
-      );
+      const addressCmd = walletConfig.passwordFile
+        ? `cast wallet address --keystore ${keystorePath} --password-file ${walletConfig.passwordFile}`
+        : `cast wallet address --keystore ${keystorePath} --interactive`;
+
+      const { stdout: address, stderr: addrError } = await execAsync(addressCmd);
 
       if (addrError) {
         throw new Error(`Failed to get wallet address: ${addrError}`);
@@ -329,46 +335,27 @@ class VincentClient extends EventEmitter {
 
   /**
      * @notice Load Vincent trading tool configuration for competition
-     * @dev Configures ERC20 transfer tool with spending limit and time restriction policies
+     * @dev Configures proper ERC20 trading tool with enhanced policies
      * @return {Object} Bundled Vincent tool ready for competition use
      */
   async _loadVincentTradingTool () {
     try {
-      // ============ Import Actual Vincent Tool ============
-      // Note: This would import from actual Vincent tool packages
-      // For competition, we need ERC20 transfer tool with spending limits
-
-      // Example structure based on Vincent documentation:
+      // ============ Load Enhanced ERC20 Trading Tool ============
+      // Use the properly implemented Vincent tool with official SDK
       const bundledTool = {
-        vincentTool: {
-          name: 'erc20-trading-tool',
-          packageName: '@regav-ai/vincent-tool-erc20-trading',
-          toolParamsSchema: {
-            type: 'object',
-            properties: {
-              tokenAddress: { type: 'string' },
-              amount: { type: 'number' },
-              recipientAddress: { type: 'string' },
-              reason: { type: 'string' }
-            },
-            required: ['tokenAddress', 'amount', 'recipientAddress', 'reason']
-          },
-          supportedPolicies: [
-            'spending-limit-policy',
-            'time-restriction-policy',
-            'token-allowlist-policy'
-          ],
-          // Tool would have precheck and execute functions
-          precheck: async () => ({ success: true }),
-          execute: async () => ({ success: true })
-        },
-        ipfsCid: 'QmVincentTradingTool123' // IPFS CID of deployed tool
+        vincentTool: enhancedERC20TradingTool,
+        ipfsCid: enhancedERC20TradingTool.ipfsCid || 'QmVDKKmEKNyrFs5XxCVgJ5iAvc8djNMDngQJaxJy7VMp7G'
       };
 
-      logger.debug('Vincent trading tool loaded', {
-        toolName: bundledTool.vincentTool.name,
-        supportedPolicies: bundledTool.vincentTool.supportedPolicies,
-        ipfsCid: bundledTool.ipfsCid
+      logger.debug('Enhanced Vincent trading tool loaded', {
+        toolName: bundledTool.vincentTool.packageName,
+        supportedPolicies: bundledTool.vincentTool.supportedPolicies?.length || 0,
+        ipfsCid: bundledTool.ipfsCid,
+        policies: {
+          tradeAmountLimit: !!bundledTool.vincentTool.supportedPolicies,
+          tradeExpiry: !!bundledTool.vincentTool.supportedPolicies,
+          tokenAllowlist: !!bundledTool.vincentTool.supportedPolicies
+        }
       });
 
       return bundledTool;
@@ -409,38 +396,55 @@ class VincentClient extends EventEmitter {
     try {
       logger.debug('Initializing competition policies...');
 
-      // ============ Competition Spending Policy ============
-      const competitionSpendingPolicy = {
-        id: 'competition-spending-policy',
+      // ============ Trade Amount Limit Policy ============
+      const tradeAmountLimitPolicy = {
+        id: 'trade-amount-limit-policy',
         type: POLICY_TYPES.SPENDING_LIMIT,
-        name: 'Competition Spending Limits',
+        name: 'Trade Amount Limit Policy',
+        packageName: '@regav-ai/vincent-policy-trade-amount-limit',
+        ipfsCid: 'Qmety6oZ7xZQoSY57pJzjq94W1XTDCGc3ohUVzKh4K1s8n',
         config: {
-          dailyLimit: this.config.dailySpendingLimit,
-          perTradeLimit: this.config.maxTradeAmount,
-          hourlyLimit: this.config.hourlySpendingLimit || (this.config.dailySpendingLimit * 0.5),
-          resetHour: 0, // Reset at midnight UTC
+          maxTradeAmount: this.config.maxTradeAmount || 1000, // $1,000 default
+          allowedChains: [1, 10, 42161, 8453, 137], // Ethereum, Optimism, Arbitrum, Base, Polygon
+          currency: 'USD',
           competitionMode: true
+        },
+        userParams: {
+          maxTradeAmount: this.config.maxTradeAmount || 1000,
+          allowedChains: [1, 10, 42161, 8453, 137],
+          currency: 'USD'
         },
         isActive: true,
         createdAt: Date.now()
       };
 
-      // ============ High-Frequency Trading Policy ============
-      const highFrequencyPolicy = {
-        id: 'high-frequency-trading-policy',
-        type: POLICY_TYPES.TRADE_FREQUENCY,
-        name: 'High-Frequency Trading Limits',
+      // ============ Trade Expiry Policy ============
+      const tradeExpiryPolicy = {
+        id: 'trade-expiry-policy',
+        type: POLICY_TYPES.TIME_RESTRICTION,
+        name: 'Trade Expiry Policy',
+        packageName: '@regav-ai/vincent-policy-trade-expiry',
+        ipfsCid: 'QmcV65YhP7Kq9JAGLV5Xe2HuFB9sSYejE5DaYce3qd65jP',
         config: {
-          maxTradesPerMinute: this.tradingConfig.maxTradesPerMinute || 5,
-          maxTradesPerHour: this.tradingConfig.maxTradesPerHour || 200,
-          minTimeBetweenTrades: this.tradingConfig.minTimeBetweenTrades || 2000, // 2 seconds
+          expiryTimeSeconds: this.config.tradeExpiryMinutes ? this.config.tradeExpiryMinutes * 60 : 600, // 10 minutes default
+          allowedChains: [1, 10, 42161, 8453, 137],
+          enforceStrictExpiry: true,
+          maxExpiryTimeSeconds: 3600, // 1 hour max
+          minExpiryTimeSeconds: 60, // 1 minute min
           competitionMode: true
+        },
+        userParams: {
+          expiryTimeSeconds: this.config.tradeExpiryMinutes ? this.config.tradeExpiryMinutes * 60 : 600,
+          allowedChains: [1, 10, 42161, 8453, 137],
+          enforceStrictExpiry: true,
+          maxExpiryTimeSeconds: 3600,
+          minExpiryTimeSeconds: 60
         },
         isActive: true,
         createdAt: Date.now()
       };
 
-      // ============ Competition Time Policy ============
+      // ============ Keep existing Competition Time Policy for internal use ============
       const competitionTimePolicy = {
         id: 'competition-time-policy',
         type: POLICY_TYPES.TIME_RESTRICTION,
@@ -460,36 +464,64 @@ class VincentClient extends EventEmitter {
       const tokenAllowlistPolicy = {
         id: 'token-allowlist-policy',
         type: POLICY_TYPES.TOKEN_ALLOWLIST,
-        name: 'Competition Token Allowlist',
+        name: 'Token Allowlist Policy',
+        packageName: '@regav-ai/vincent-policy-token-allowlist',
+        ipfsCid: 'QmeNEQwK5ZJ7xucLy2FsxQjju7F2uA9BbCvDAhmWoGhTeG',
         config: {
-          allowedTokens: this.tradingConfig.allowedTokens || [
-            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+          allowedTokens: [
+            '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', // WBTC
             '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
-            '0x6B175474E89094C44Da98b954EedeAC495271d0F' // DAI
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+            '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4' // SOL (wrapped)
           ],
-          strictMode: false, // Allow other tokens with warnings
-          competitionPairs: this.tradingConfig.tradingPairs || [
-            'BTC/USDT', 'ETH/USDT', 'SOL/USDC'
-          ]
+          allowedChains: [1, 10, 42161, 8453, 137],
+          strictMode: true, // Strict enforcement for security
+          allowUnknownTokens: false,
+          requireTokenVerification: true,
+          competitionMode: true
+        },
+        userParams: {
+          allowedTokens: [
+            '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', // WBTC
+            '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
+            '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
+            '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
+            '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4' // SOL (wrapped)
+          ],
+          allowedChains: [1, 10, 42161, 8453, 137],
+          strictMode: true,
+          allowUnknownTokens: false,
+          requireTokenVerification: true
         },
         isActive: true,
         createdAt: Date.now()
       };
 
       // ============ Store Active Policies ============
-      this.activePolicies.set(competitionSpendingPolicy.id, competitionSpendingPolicy);
-      this.activePolicies.set(highFrequencyPolicy.id, highFrequencyPolicy);
+      this.activePolicies.set(tradeAmountLimitPolicy.id, tradeAmountLimitPolicy);
+      this.activePolicies.set(tradeExpiryPolicy.id, tradeExpiryPolicy);
       this.activePolicies.set(competitionTimePolicy.id, competitionTimePolicy);
       this.activePolicies.set(tokenAllowlistPolicy.id, tokenAllowlistPolicy);
 
-      logger.logVincentOperation('COMPETITION_POLICIES_INITIALIZED', {
+      logger.logVincentOperation('VINCENT_POLICIES_INITIALIZED', {
         totalPolicies: this.activePolicies.size,
         policyTypes: Array.from(this.activePolicies.values()).map(p => p.type),
+        vincentPolicies: {
+          tradeAmountLimit: tradeAmountLimitPolicy.packageName,
+          tradeExpiry: tradeExpiryPolicy.packageName,
+          tokenAllowlist: tokenAllowlistPolicy.packageName
+        },
+        ipfsCids: {
+          tradeAmountLimit: tradeAmountLimitPolicy.ipfsCid,
+          tradeExpiry: tradeExpiryPolicy.ipfsCid,
+          tokenAllowlist: tokenAllowlistPolicy.ipfsCid
+        },
         competitionMode: true,
-        spendingLimits: {
-          daily: this.config.dailySpendingLimit,
-          perTrade: this.config.maxTradeAmount,
-          hourly: this.config.hourlySpendingLimit
+        configuration: {
+          maxTradeAmount: this.config.maxTradeAmount,
+          expiryTimeSeconds: this.config.tradeExpiryMinutes ? this.config.tradeExpiryMinutes * 60 : 600,
+          allowedTokens: tokenAllowlistPolicy.config.allowedTokens.length
         }
       });
     } catch (error) {

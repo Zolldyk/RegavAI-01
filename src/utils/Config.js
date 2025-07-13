@@ -45,7 +45,7 @@ class ConfigManager {
 
     // Recall network configuration
     this.config.recall = {
-      apiKey: process.env.RECALL_API_KEY,
+      apiKey: process.env.RECALL_API_KEY || process.env.RECALL_PRIVATE_KEY,
       network: process.env.RECALL_NETWORK || 'testnet',
       baseUrl: process.env.RECALL_BASE_URL || 'https://api.sandbox.competitions.recall.network',
       competitionId: process.env.RECALL_COMPETITION_ID,
@@ -70,7 +70,7 @@ class ConfigManager {
     // Gaia AI network configuration
     this.config.gaia = {
       apiKey: process.env.GAIA_API_KEY,
-      baseUrl: process.env.GAIA_BASE_URL || 'https://llama3b.gaia.domains/v1',
+      baseUrl: process.env.GAIA_NODE_URL || 'https://llama3b.gaia.domains/v1',
       model: process.env.GAIA_MODEL || 'llama3b',
       embeddingModel: process.env.GAIA_EMBEDDING_MODEL || 'nomic-embed',
       sentimentNodeUrl: process.env.GAIA_SENTIMENT_NODE_URL,
@@ -79,9 +79,9 @@ class ConfigManager {
 
     // Wallet and security configuration
     this.config.wallet = {
-      name: process.env.WALLET_NAME || 'agent-wallet',
-      passwordFile: process.env.WALLET_PASSWORD_FILE || '.wallet-password',
-      useEncrypted: process.env.VINCENT_DELEGATEE_PRIVATE_KEY_ENCRYPTED === 'true'
+      name: process.env.WALLET_NAME || 'arbWallet',
+      passwordFile: process.env.WALLET_PASSWORD_FILE || '/Users/pc/regav-ai/.wallet-password',
+      useEncrypted: process.env.VINCENT_DELEGATEE_PRIVATE_KEY_ENCRYPTED !== 'false' // Default to true
     };
 
     // Trading strategy configuration
@@ -322,10 +322,10 @@ class ConfigManager {
       }).required(),
 
       recall: Joi.object({
-        apiKey: Joi.string().required(),
+        apiKey: Joi.string().allow('', null),
         network: Joi.string().valid('testnet', 'mainnet').required(),
         baseUrl: Joi.string().uri().required(),
-        competitionId: Joi.string().allow(null),
+        competitionId: Joi.string().allow('', null),
         agentName: Joi.string().required(),
         competitionDuration: Joi.number().min(1).max(1440).required(), // 1 minute to 24 hours
         autoRegister: Joi.boolean().required(),
@@ -340,7 +340,7 @@ class ConfigManager {
         tradeExpiryMinutes: Joi.number().positive().max(60).required(),
         dailySpendingLimit: Joi.number().positive().required(),
         litNetwork: Joi.string().required(),
-        capacityCreditTokenId: Joi.string().allow(null)
+        capacityCreditTokenId: Joi.string().allow('', null)
       }).required(),
 
       gaia: Joi.object({
@@ -378,9 +378,9 @@ class ConfigManager {
 
       security: Joi.object({
         jwt: Joi.object({
-          secret: Joi.string().min(32).required(),
-          expiry: Joi.string().required()
-        }).required(),
+          secret: Joi.string().min(32).allow('', null),
+          expiry: Joi.string().allow('', null)
+        }).optional(),
         rateLimit: Joi.object({
           windowMs: Joi.number().positive().required(),
           maxRequests: Joi.number().positive().required()

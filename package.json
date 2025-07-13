@@ -28,6 +28,9 @@
     "lint:fix": "eslint src/ test/ --fix",
     "format": "prettier --write src/ test/",
     "build": "echo 'No build step required for Node.js project'",
+    "deploy": "vercel --prod",
+    "deploy:preview": "vercel",
+    "vercel-build": "echo 'Build step for Vercel'",
     "validate": "npm run lint && npm run test",
     "competition": "NODE_ENV=production npm run start:recall",
     "sandbox": "NODE_ENV=development RECALL_NETWORK=testnet npm run start:recall",
@@ -37,12 +40,15 @@
     "check-env": "node scripts/check-environment.js"
   },
   "dependencies": {
+    "@lit-protocol/lit-node-client": "^7.2.0",
+    "@lit-protocol/vincent-app-sdk": "^1.0.2",
     "@modelcontextprotocol/sdk": "^1.15.0",
     "@recallnet/agent-toolkit": "^0.0.8",
     "axios": "^1.6.0",
     "dotenv": "^16.6.1",
     "ethers": "^6.15.0",
     "joi": "^17.13.3",
+    "technicalindicators": "^3.1.0",
     "uuid": "^11.1.0",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0"

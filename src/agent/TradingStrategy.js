@@ -1,9 +1,9 @@
 // ============ Imports ============
 // import { ethers } from 'ethers';
-import { TechnicalIndicators } from '../analytics/TechnicalIndicators.js';
-import { RiskManager } from './RiskManager.js';
-import { Logger } from '../utils/Logger.js';
-import { CONFIG } from '../config/trading.js';
+import TechnicalIndicators from '../analytics/TechnicalIndicators.js';
+// import { RiskManager } from './RiskManager.js'; // Will be injected separately
+import Logger from '../utils/Logger.js';
+// CONFIG will be loaded from environment variables
 
 // ============ Constants ============
 const TRADE_TYPES = {
@@ -39,16 +39,22 @@ const ARBITRAGE_OPPORTUNITIES = {
  * @dev Implements cutting-edge high-frequency trading optimized for maximum profit in 1-hour competition
  */
 export class TradingStrategy {
-  constructor (recallClient, vincentClient, gaiaClient, logger = new Logger('TradingStrategy')) {
+  constructor (options = {}, logger = null) {
+    // Extract parameters from options object
+    const {
+      recallClient,
+      vincentClient,
+      gaiaClient
+    } = options;
     // ============ Core Dependencies ============
     this.recall = recallClient;
     this.vincent = vincentClient;
     this.gaia = gaiaClient;
-    this.logger = logger;
+    this.logger = logger || Logger.createMainLogger('info', false);
 
     // ============ Strategy Components ============
     this.indicators = new TechnicalIndicators();
-    this.riskManager = new RiskManager();
+    // RiskManager will be injected separately to avoid circular dependencies
 
     // ============ Strategy State ============
     this.isActive = false;
@@ -100,8 +106,8 @@ export class TradingStrategy {
 
     // ============ Adaptive Parameters ============
     this.adaptiveParams = {
-      entryThreshold: CONFIG.BUY_THRESHOLD || 0.6,
-      exitThreshold: CONFIG.SELL_THRESHOLD || -0.6,
+      entryThreshold: parseFloat(process.env.BUY_THRESHOLD) || 0.6,
+      exitThreshold: parseFloat(process.env.SELL_THRESHOLD) || -0.6,
       positionSizeMultiplier: 1.0,
       stopLossMultiplier: 1.0,
       takeProfitMultiplier: 1.0,
@@ -128,16 +134,82 @@ export class TradingStrategy {
     };
 
     // ============ Trading Parameters ============
-    this.tradingPairs = CONFIG.TRADING_PAIRS || ['BTC/USDT', 'ETH/USDT', 'SOL/USDC'];
-    this.maxConcurrentTrades = CONFIG.MAX_CONCURRENT_TRADES || 5;
-    this.basePositionSize = CONFIG.BASE_POSITION_SIZE || 0.08; // 8% of available balance
-    this.scalingInterval = CONFIG.SCALPING_INTERVAL || 2000; // 2 seconds for micro-scalping
+    this.tradingPairs = (process.env.TRADING_PAIRS || 'BTC/USDT,ETH/USDT,SOL/USDC').split(',');
+    this.maxConcurrentTrades = parseInt(process.env.MAX_CONCURRENT_TRADES) || 5;
+    this.basePositionSize = parseFloat(process.env.BASE_POSITION_SIZE) || 0.08; // 8% of available balance
+    this.scalingInterval = parseInt(process.env.SCALPING_INTERVAL) || 2000; // 2 seconds for micro-scalping
 
     this.logger.info('Enhanced TradingStrategy initialized', {
       pairs: this.tradingPairs.length,
       maxConcurrentTrades: this.maxConcurrentTrades,
       features: Object.keys(this.features).filter(f => this.features[f])
     });
+  }
+
+  // ============ Public API Methods ============
+
+  /**
+   * @notice Analyze market conditions for a given trading signal
+   * @param {Object} marketData - Market data with pair, signal, confidence
+   * @return {Object} Trading decision with action, amount, price, shouldTrade
+   */
+  async analyzeMarket (marketData) {
+    try {
+      const { pair, signal, confidence } = marketData;
+
+      // Basic signal strength check
+      const signalStrength = Math.abs(signal);
+      const shouldTrade = signalStrength > 0.6 && confidence > 0.7;
+
+      if (!shouldTrade) {
+        return { shouldTrade: false, reason: 'Signal too weak' };
+      }
+
+      // Determine action and amount
+      const action = signal > 0 ? 'BUY' : 'SELL';
+      const amount = this._calculateOptimalPositionSize(signalStrength);
+      const price = this._getEstimatedPrice(pair);
+
+      return {
+        shouldTrade: true,
+        action,
+        amount,
+        price,
+        confidence,
+        reason: `Strong ${action} signal detected`
+      };
+    } catch (error) {
+      this.logger.error('Market analysis failed:', error.message);
+      return { shouldTrade: false, reason: 'Analysis error' };
+    }
+  }
+
+  /**
+   * @notice Calculate optimal position size based on risk parameters
+   * @param {number} signalStrength - Signal strength (0-1)
+   * @return {number} Position size
+   */
+  _calculateOptimalPositionSize (signalStrength) {
+    // Use conservative sizing for testing
+    const baseAmount = 0.001;
+    const strengthMultiplier = Math.min(signalStrength * 2, 2.0);
+    return baseAmount * strengthMultiplier;
+  }
+
+  /**
+   * @notice Get estimated price for trading pair
+   * @param {string} pair - Trading pair
+   * @return {number} Estimated price
+   */
+  _getEstimatedPrice (pair) {
+    const prices = {
+      'BTC/USDT': 43000,
+      'ETH/USDT': 2600,
+      'SOL/USDC': 95,
+      'BTC/USDC': 43000,
+      'ETH/USDC': 2600
+    };
+    return prices[pair] || 1000;
   }
 
   // ============ Enhanced Strategy Lifecycle ============
@@ -540,9 +612,10 @@ export class TradingStrategy {
               };
 
               // Adjust profit for bridge fees
-              opportunity.netProfit = opportunity.profit - opportunity.bridgeFee;
+              const netProfit = opportunity.profit - opportunity.bridgeFee;
+              opportunity.profit = netProfit;
 
-              if (opportunity.netProfit > this.arbitrageDetector.profitThreshold) {
+              if (opportunity.profit > this.arbitrageDetector.profitThreshold) {
                 this.arbitrageDetector.crossChainOpportunities.set(pair, [
                   ...(this.arbitrageDetector.crossChainOpportunities.get(pair) || []),
                   opportunity
@@ -811,7 +884,7 @@ export class TradingStrategy {
         position.minPnL = Math.min(position.minPnL || 0, pnlPercent);
 
         // ============ Advanced Exit Logic ============
-        const exitDecision = await this._evaluateAdvancedExitConditions(position, currentPrice, currentData);
+        const exitDecision = await this._evaluateAdvancedExitConditions(position, currentData);
 
         if (exitDecision.shouldExit) {
           await this._executePositionExit(pair, position, exitDecision, currentPrice);
@@ -828,23 +901,22 @@ export class TradingStrategy {
   /**
      * @notice Evaluate advanced exit conditions for positions
      * @param {Object} position - Position data
-     * @param {number} currentPrice - Current market price
      * @param {Object} marketData - Current market data
      * @returns {Object} Exit decision with detailed reasoning
      */
-  async _evaluateAdvancedExitConditions (position, currentPrice, marketData) {
+  async _evaluateAdvancedExitConditions (position, marketData) {
     const exitReasons = [];
     let shouldExit = false;
     let exitType = null;
 
     // ============ Traditional Stop Loss/Take Profit ============
-    if (position.currentPnL <= -CONFIG.STOP_LOSS_PERCENT) {
+    if (position.currentPnL <= -(parseFloat(process.env.STOP_LOSS_PERCENT) || 0.3)) {
       exitReasons.push('STOP_LOSS');
       shouldExit = true;
       exitType = 'STOP_LOSS';
     }
 
-    if (position.currentPnL >= CONFIG.TAKE_PROFIT_PERCENT) {
+    if (position.currentPnL >= (parseFloat(process.env.TAKE_PROFIT_PERCENT) || 0.5)) {
       exitReasons.push('TAKE_PROFIT');
       shouldExit = true;
       exitType = 'TAKE_PROFIT';

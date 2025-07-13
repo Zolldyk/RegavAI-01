@@ -1,2 +1,263 @@
-node_modules/
+# ============================================================================
+# CRITICAL SENSITIVE DATA - MUST NEVER BE COMMITTED
+# ============================================================================
+
+# Environment files containing API keys, private keys, secrets
 .env
+.env.*
+!.env.example
+.env.local
+.env.development
+.env.staging
+.env.production
+
+# Wallet and private key files
+.wallet-password
+*wallet*
+*keystore*
+*.key
+*.pem
+*.p12
+*.pfx
+private_key*
+mnemonic*
+
+# API keys and secrets in any format
+*api*key*
+*secret*
+*password*
+*credential*
+*auth*token*
+
+# ============================================================================
+# BUILD ARTIFACTS & DEPENDENCIES
+# ============================================================================
+
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ============================================================================
+# LOGS & TEMPORARY FILES
+# ============================================================================
+
+# Application logs
+logs/
+*.log
+log-*.txt
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage and test outputs
+coverage/
+.nyc_output/
+.coverage/
+.pytest_cache/
+*.cover
+.hypothesis/
+
+# Temporary files
+*.tmp
+*.temp
+*.cache
+.cache/
+tmp/
+temp/
+
+# ============================================================================
+# DEPLOYMENT & HOSTING FILES
+# ============================================================================
+
+# Vercel
+.vercel/
+.vercel
+vercel.json.bak
+
+# Other deployment files
+.VINCENT_DEPLOYMENT_SUCCESS.md
+.update-cids-fixed.sh
+.deploy-web3storage.js
+.deploy-vincent-policies.js
+.deploy-pinata.js
+
+# Deployment scripts containing sensitive data
+setup-env-manual.sh
+setup-vercel-env.sh
+setup-wallet.js
+update-cids-fixed.sh
+*cids*.sh
+
+# Log files and directories
+logs/
+*.log
+log-*.json
+performance-*.json
+sentiment-*.json
+trades-*.json
+
+# Specific files with sensitive data
+VINCENT_DEPLOYMENT_SUCCESS.md
+test-backtest-1min.js
+
+# ============================================================================
+# DEVELOPMENT & IDE FILES
+# ============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ============================================================================
+# BLOCKCHAIN & CRYPTO SPECIFIC
+# ============================================================================
+
+# Wallet files
+wallet.dat
+*wallet*.json
+keystore/
+accounts/
+
+# Private keys and mnemonics
+private-keys/
+*.priv
+*mnemonic*
+*seed*
+
+# Gas and transaction files
+gas-*.json
+tx-*.json
+nonce-*.json
+
+# ============================================================================
+# DATA & CONFIGURATION FILES
+# ============================================================================
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration backups
+*.conf.bak
+*.config.bak
+*.json.bak
+*.yaml.bak
+*.yml.bak
+
+# Data files that might contain sensitive info
+data/
+*.csv
+*.json
+backup/
+backups/
+
+# ============================================================================
+# SECURITY & TESTING
+# ============================================================================
+
+# Security scan results
+security-report*
+vulnerability-report*
+
+# Test data that might contain sensitive info
+test-data/
+mock-data/
+fixtures/
+
+# Test scripts with potentially sensitive configuration
+test-*.js
+*-test.js
+test-full-trading-agent*.js
+
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Docker
+docker-compose.override.yml
+
+# ============================================================================
+# PROJECT SPECIFIC - SENSITIVE/UNNECESSARY FILES
+# ============================================================================
+
+# MCP configuration (may contain sensitive endpoints)
+mcp.json
+
+# Dist and build outputs - contains sensitive deployment CIDs
+dist/
+
+# Agent start scripts (may contain sensitive configs)
+start-*.js

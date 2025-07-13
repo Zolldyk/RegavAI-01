@@ -211,7 +211,7 @@ class TechnicalIndicators extends EventEmitter {
       indicators.atr = this._calculateATR(highs, lows, closes);
 
       // Calculate Volume indicators
-      indicators.volume = this._calculateVolumeIndicators(closes, volumeValues);
+      indicators.volume = this._calculateVolumeIndicators(volumeValues);
 
       // Calculate OBV (On Balance Volume)
       indicators.obv = this._calculateOBV(closes, volumeValues);
@@ -474,7 +474,7 @@ class TechnicalIndicators extends EventEmitter {
      * @param {Array} volumes Array of volume data
      * @return {object} Volume indicators
      */
-  _calculateVolumeIndicators (closes, volumes) {
+  _calculateVolumeIndicators (volumes) {
     try {
       if (volumes.length < this.indicators.volume.maPeriod) {
         return { signal: 'NEUTRAL' };

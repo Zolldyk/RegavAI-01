@@ -17,15 +17,15 @@
         "WIF/USDT",
         "SHIB/USDT"
       ],
-      "maxConcurrentTrades": 5,
-      "basePositionSize": 0.08,
-      "scalingInterval": 2000,
+      "maxConcurrentTrades": 12,
+      "basePositionSize": 0.18,
+      "scalingInterval": 800,
       "timeframes": ["1s", "5s", "15s", "1m", "5m"]
     },
   
     "thresholds": {
-      "buyThreshold": 0.6,
-      "sellThreshold": -0.6,
+      "buyThreshold": 0.45,
+      "sellThreshold": -0.45,
       "confidenceThreshold": 0.5,
       "signalStrengths": {
         "weak": 0.3,
@@ -37,11 +37,11 @@
     },
   
     "riskManagement": {
-      "stopLossPercent": 0.3,
-      "takeProfitPercent": 0.5,
-      "maxDrawdownPercent": 3.0,
+      "stopLossPercent": 0.15,
+      "takeProfitPercent": 0.35,
+      "maxDrawdownPercent": 4.0,
       "positionSizeLimits": {
-        "min": 50,
+        "min": 200,
         "max": 5000
       },
       "volatilityAdjustment": {
@@ -88,7 +88,7 @@
         "triangular": true,
         "temporal": true
       },
-      "profitThreshold": 0.15,
+      "profitThreshold": 0.08,
       "bridgeFees": {
         "ethereum": 0.02,
         "arbitrum": 0.005,
@@ -187,8 +187,8 @@
   
     "competition": {
       "duration": 3600000,
-      "targetTrades": 50,
-      "profitTarget": 25,
+      "targetTrades": 80,
+      "profitTarget": 8,
       "maxLoss": 5,
       "strategies": {
         "scalping": 0.4,

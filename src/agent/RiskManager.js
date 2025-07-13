@@ -1,6 +1,6 @@
 // ============ Imports ============
 import { EventEmitter } from 'events';
-import { Logger } from '../utils/Logger.js';
+import Logger from '../utils/Logger.js';
 
 // ============ Constants ============
 const RISK_LEVELS = {
@@ -20,15 +20,15 @@ const RISK_EVENTS = {
 };
 
 const DEFAULT_RISK_PARAMS = {
-  maxDrawdown: 5.0, // Maximum drawdown percentage
-  maxPositionSize: 0.2, // Maximum position size as % of portfolio
-  stopLossPercent: 0.3, // Stop loss percentage
-  takeProfitPercent: 0.5, // Take profit percentage
-  maxConcurrentTrades: 3, // Maximum number of concurrent positions
-  maxDailyLoss: 2.0, // Maximum daily loss percentage
-  maxCorrelation: 0.7, // Maximum correlation between positions
-  minLiquidity: 100000, // Minimum liquidity threshold (USD)
-  volatilityThreshold: 0.15 // Maximum volatility threshold
+  maxDrawdown: 4.5, // Maximum drawdown percentage - aggressive for 1-hour competition
+  maxPositionSize: 0.20, // Maximum position size as % of portfolio - hyper-aggressive
+  stopLossPercent: 0.15, // Stop loss percentage - very tight for 1-hour scalping
+  takeProfitPercent: 0.35, // Take profit percentage - quick profits in 1 hour
+  maxConcurrentTrades: 12, // Maximum number of concurrent positions - maximum activity
+  maxDailyLoss: 5.0, // Maximum hourly loss percentage - higher for 1-hour window
+  maxCorrelation: 0.7, // Maximum correlation between positions - allow more correlation
+  minLiquidity: 30000, // Minimum liquidity threshold (USD) - lower for speed
+  volatilityThreshold: 0.15 // Maximum volatility threshold - embrace volatility for profits
 };
 
 /**
@@ -47,7 +47,7 @@ export class RiskManager extends EventEmitter {
     };
 
     // ============ Core Dependencies ============
-    this.logger = new Logger('RiskManager');
+    this.logger = Logger.createMainLogger('info', false);
 
     // ============ Risk State Tracking ============
     this.portfolioValue = 0;
@@ -187,6 +187,141 @@ export class RiskManager extends EventEmitter {
     } catch (error) {
       this.logger.error('Error in canOpenPosition', { error: error.message });
       return false; // Fail safe
+    }
+  }
+
+  /**
+     * @notice Validate if a trade meets all risk management criteria
+     * @param {Object} tradeParams - Trade parameters to validate
+     * @param {string} tradeParams.pair - Trading pair
+     * @param {string} tradeParams.action - BUY or SELL
+     * @param {number} tradeParams.amount - Trade amount
+     * @param {number} tradeParams.price - Trade price
+     * @returns {Object} Validation result with approval status and reason
+     */
+  async validateTrade (tradeParams) {
+    try {
+      const { pair, action, amount, price } = tradeParams;
+
+      // ============ Basic Parameter Validation ============
+      if (!pair || !action || !amount || !price) {
+        return {
+          approved: false,
+          reason: 'Missing required trade parameters',
+          riskLevel: RISK_LEVELS.HIGH
+        };
+      }
+
+      // ============ Emergency Stop Check ============
+      if (this.emergencyStop) {
+        return {
+          approved: false,
+          reason: 'Emergency stop active',
+          riskLevel: RISK_LEVELS.CRITICAL
+        };
+      }
+
+      // ============ Position Size Validation ============
+      const tradeValue = amount * price;
+      if (tradeValue > this.config.maxPositionSize * this.portfolioValue) {
+        return {
+          approved: false,
+          reason: `Trade size exceeds maximum position limit: $${tradeValue.toFixed(2)} > $${(this.config.maxPositionSize * this.portfolioValue).toFixed(2)}`,
+          riskLevel: RISK_LEVELS.HIGH
+        };
+      }
+
+      // ============ Daily Loss Limit Check ============
+      if (this.dailyPnL < -this.config.maxDailyLoss) {
+        return {
+          approved: false,
+          reason: 'Daily loss limit exceeded',
+          riskLevel: RISK_LEVELS.CRITICAL
+        };
+      }
+
+      // ============ Concurrent Trades Check ============
+      if (action === 'BUY' && this.activePositions.size >= this.config.maxConcurrentTrades) {
+        return {
+          approved: false,
+          reason: 'Maximum concurrent trades limit reached',
+          riskLevel: RISK_LEVELS.MEDIUM
+        };
+      }
+
+      // ============ Drawdown Check ============
+      if (this.currentDrawdown >= this.config.maxDrawdown) {
+        return {
+          approved: false,
+          reason: 'Maximum drawdown limit exceeded',
+          riskLevel: RISK_LEVELS.CRITICAL
+        };
+      }
+
+      // ============ Volatility Risk Assessment ============
+      const volatility = this._getVolatility(pair);
+      if (volatility > this.config.volatilityThreshold) {
+        return {
+          approved: false,
+          reason: 'Market volatility too high for safe trading',
+          riskLevel: RISK_LEVELS.HIGH
+        };
+      }
+
+      // ============ Liquidity Check ============
+      const liquidity = this._getLiquidity(pair);
+      if (liquidity < this.config.minLiquidity) {
+        return {
+          approved: false,
+          reason: 'Insufficient market liquidity',
+          riskLevel: RISK_LEVELS.HIGH
+        };
+      }
+
+      // ============ Calculate Risk Score ============
+      const riskScore = this._calculateTradeRiskScore(tradeParams);
+      let riskLevel = RISK_LEVELS.LOW;
+
+      if (riskScore > 0.8) {
+        riskLevel = RISK_LEVELS.CRITICAL;
+      } else if (riskScore > 0.6) {
+        riskLevel = RISK_LEVELS.HIGH;
+      } else if (riskScore > 0.4) {
+        riskLevel = RISK_LEVELS.MEDIUM;
+      }
+
+      // ============ Final Approval Decision ============
+      const approved = riskScore < 0.7; // Approve if risk score is below 70%
+
+      this.logger.info('Trade validation completed', {
+        pair,
+        action,
+        amount,
+        riskScore: riskScore.toFixed(3),
+        riskLevel,
+        approved
+      });
+
+      return {
+        approved,
+        reason: approved ? 'Trade passes all risk checks' : 'Risk score too high',
+        riskLevel,
+        riskScore,
+        details: {
+          volatility,
+          liquidity,
+          tradeValue,
+          currentDrawdown: this.currentDrawdown,
+          activePositions: this.activePositions.size
+        }
+      };
+    } catch (error) {
+      this.logger.error('Error validating trade', { error: error.message });
+      return {
+        approved: false,
+        reason: 'Risk validation error',
+        riskLevel: RISK_LEVELS.CRITICAL
+      };
     }
   }
 
@@ -759,6 +894,47 @@ export class RiskManager extends EventEmitter {
       }
     } catch (error) {
       this.logger.error('Error handling risk breach', { error: error.message });
+    }
+  }
+
+  /**
+     * @notice Calculate comprehensive risk score for a trade
+     * @param {Object} tradeParams - Trade parameters
+     * @returns {number} Risk score between 0 and 1 (higher = riskier)
+     */
+  _calculateTradeRiskScore (tradeParams) {
+    try {
+      const { pair, amount, price } = tradeParams;
+      let riskScore = 0;
+
+      // ============ Position Size Risk (0-0.3) ============
+      const tradeValue = amount * price;
+      const portfolioPercentage = tradeValue / this.portfolioValue;
+      const sizeRisk = Math.min(portfolioPercentage / this.config.maxPositionSize, 1) * 0.3;
+      riskScore += sizeRisk;
+
+      // ============ Volatility Risk (0-0.25) ============
+      const volatility = this._getVolatility(pair);
+      const volatilityRisk = Math.min(volatility / this.config.volatilityThreshold, 1) * 0.25;
+      riskScore += volatilityRisk;
+
+      // ============ Liquidity Risk (0-0.2) ============
+      const liquidity = this._getLiquidity(pair);
+      const liquidityRisk = Math.max(0, 1 - (liquidity / this.config.minLiquidity)) * 0.2;
+      riskScore += liquidityRisk;
+
+      // ============ Drawdown Risk (0-0.15) ============
+      const drawdownRisk = (this.currentDrawdown / this.config.maxDrawdown) * 0.15;
+      riskScore += drawdownRisk;
+
+      // ============ Concurrent Positions Risk (0-0.1) ============
+      const positionRisk = (this.activePositions.size / this.config.maxConcurrentTrades) * 0.1;
+      riskScore += positionRisk;
+
+      return Math.min(riskScore, 1); // Cap at 1.0
+    } catch (error) {
+      this.logger.error('Error calculating trade risk score', { error: error.message });
+      return 0.8; // Conservative high risk if calculation fails
     }
   }
 

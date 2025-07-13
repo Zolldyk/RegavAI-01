@@ -1,5 +1,5 @@
 // ============ Imports ============
-import { Logger } from '../utils/Logger.js';
+import Logger from '../utils/Logger.js';
 import { CONFIG } from '../config/trading.js';
 
 // ============ Constants ============
@@ -462,7 +462,7 @@ export class SentimentAnalyzer {
      * @param {Object} whale - Whale activity data
      * @returns {Object} Composite sentiment analysis
      */
-  _calculateCompositeSentiment (news, social, whale) {
+  _calculateCompositeSentiment (news, social, whale, pair = 'default') {
     try {
       // ============ Weighted Sentiment Calculation ============
       const weightedScore =
@@ -480,7 +480,7 @@ export class SentimentAnalyzer {
       const trend = this._determineSentimentTrend(weightedScore, news, social, whale);
 
       // ============ Momentum Calculation ============
-      const momentum = this._calculateCurrentMomentum(news, social, whale);
+      const momentum = this._calculateSentimentMomentum(pair, { score: weightedScore, confidence: finalConfidence });
 
       return {
         score: Math.max(0, Math.min(1, weightedScore)),

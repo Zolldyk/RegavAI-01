@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Regav Trading Agent - Production</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .online { background: #d4edda; color: #155724; }
+        .api-endpoint {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Regav Trading Agent</h1>
+        <p><span class="status online">PRODUCTION DEPLOYED</span></p>
+        
+        <h2>🤖 AI-Powered Cryptocurrency Trading</h2>
+        <p>Advanced scalping trading agent with Vincent policy governance and Gaia AI analysis.</p>
+        
+        <h3>🔗 API Endpoints</h3>
+        <div class="api-endpoint">
+            <strong>Health Check:</strong><br>
+            <a href="/api/health" target="_blank">/api/health</a>
+        </div>
+        
+        <div class="api-endpoint">
+            <strong>Authentication Status:</strong><br>
+            <a href="/api/auth/status" target="_blank">/api/auth/status</a>
+        </div>
+        
+        <div class="api-endpoint">
+            <strong>Vincent Callback:</strong><br>
+            /api/vincent/callback
+        </div>
+        
+        <div class="api-endpoint">
+            <strong>Vincent Consent:</strong><br>
+            <a href="/api/vincent/consent" target="_blank">/api/vincent/consent</a>
+        </div>
+        
+        <h3>🔧 Quick Actions</h3>
+        <a href="/api/health" class="button">Check Health</a>
+        <a href="/api/auth/status" class="button">View Status</a>
+        <a href="/api/vincent/consent" class="button">Vincent Consent</a>
+        
+        <h3>📊 Features</h3>
+        <ul>
+            <li>✅ High-frequency scalping strategy</li>
+            <li>✅ Vincent/Lit Protocol integration</li>
+            <li>✅ Gaia AI market analysis</li>
+            <li>✅ Risk management system</li>
+            <li>✅ Real-time monitoring</li>
+        </ul>
+        
+        <hr>
+        <p><small>Deployed on Vercel • Regav-AI Team • <span id="timestamp"></span></small></p>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toISOString();
+        
+        // Auto-refresh health status
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/health');
+                const health = await response.json();
+                console.log('Health check:', health);
+            } catch (error) {
+                console.error('Health check failed:', error);
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

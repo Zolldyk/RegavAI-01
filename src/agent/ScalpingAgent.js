@@ -4,9 +4,9 @@ import { TradingStrategy } from './TradingStrategy.js';
 import { RiskManager } from './RiskManager.js';
 import { RecallClient } from '../integrations/RecallClient.js';
 import { VincentClient } from '../integrations/VincentClient.js';
-import { GaiaClient } from '../integrations/GaiaClient.js';
-import { Logger } from '../utils/Logger.js';
-import { CONFIG } from '../config/trading.js';
+import { GaiaClient } from '../integrations/Gaia.Client.js';
+import Logger from '../utils/Logger.js';
+// CONFIG will be loaded dynamically in constructor
 
 // ============ Constants ============
 const AGENT_STATES = {
@@ -28,7 +28,7 @@ export class ScalpingAgent {
   constructor (config = {}) {
     // ============ Agent Configuration ============
     this.config = {
-      ...CONFIG,
+      // Configuration loaded from environment variables
       ...config
     };
 

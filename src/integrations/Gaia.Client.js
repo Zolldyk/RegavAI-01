@@ -1,6 +1,6 @@
 // ============ Imports ============
 import axios from 'axios';
-import { Logger } from '../utils/Logger.js';
+import Logger from '../utils/Logger.js';
 
 /**
  * @title GaiaClient
@@ -13,7 +13,7 @@ export class GaiaClient {
     // ============ Core Properties ============
     this.apiKey = options.apiKey || process.env.GAIA_API_KEY;
     this.nodeUrl = options.nodeUrl || process.env.GAIA_NODE_URL || 'https://llama8b.gaia.domains/v1';
-    this.logger = options.logger || new Logger('GaiaClient');
+    this.logger = options.logger || Logger.createMainLogger('info', false);
 
     // ============ Validate Required Configuration ============
     if (!this.apiKey) {
@@ -298,7 +298,9 @@ Always respond in valid JSON format with specific execution parameters.`
     this._ensureInitialized();
 
     try {
-      const cacheKey = `market_analysis_${tradingPairs.join('_')}_${JSON.stringify(marketData).slice(0, 50)}`;
+      // Ensure tradingPairs is always an array
+      const pairsArray = Array.isArray(tradingPairs) ? tradingPairs : [tradingPairs];
+      const cacheKey = `market_analysis_${pairsArray.join('_')}_${JSON.stringify(marketData).slice(0, 50)}`;
       const cached = this._getFromCache(cacheKey);
 
       if (cached) {
@@ -309,7 +311,7 @@ Always respond in valid JSON format with specific execution parameters.`
       const currentTime = new Date().toISOString();
       const prompt = `Perform comprehensive cryptocurrency market analysis for high-frequency scalping trading.
 
-TRADING PAIRS: ${tradingPairs.join(', ')}
+TRADING PAIRS: ${pairsArray.join(', ')}
 CURRENT TIME: ${currentTime}
 COMPETITION TIMEFRAME: 1 hour maximum
 STRATEGY FOCUS: Scalping (1-5 minute holds)

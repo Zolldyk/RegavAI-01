@@ -165,8 +165,13 @@ class RecallClient extends EventEmitter {
     }
 
     // ============ Validate API Key Format ============
-    if (!this.config.apiKey || !this.config.apiKey.startsWith('pk_')) {
-      throw new Error('Invalid Recall API key format. Must start with "pk_"');
+    if (!this.config.apiKey) {
+      throw new Error('API key is required');
+    }
+
+    // Accept both pk_ format and registered API key format
+    if (!this.config.apiKey.startsWith('pk_') && !this.config.apiKey.includes('_')) {
+      throw new Error('Invalid Recall API key format');
     }
 
     // ============ Validate Network ============
@@ -269,8 +274,9 @@ class RecallClient extends EventEmitter {
 
         // ============ Load Private Key from Encrypted Wallet ============
         const passwordFile = walletConfig.passwordFile || `${process.env.HOME}/.foundry/keystore/${walletConfig.name}.password`;
+        const keystorePath = `${process.env.HOME}/.foundry/keystores/${walletConfig.name}`;
         const { stdout: privateKey } = await execAsync(
-                    `cast wallet private-key ${walletConfig.name} --password-file ${passwordFile}`
+                    `cast wallet private-key --keystore ${keystorePath} --password-file ${passwordFile}`
         );
 
         // ============ Get Wallet Address ============
@@ -317,7 +323,9 @@ class RecallClient extends EventEmitter {
       const { promisify } = await import('util');
       const execAsync = promisify(exec);
 
-      const { stdout: address } = await execAsync(`cast wallet address ${walletName}`);
+      const keystorePath = `${process.env.HOME}/.foundry/keystores/${walletName}`;
+      const passwordFile = '.wallet-password';
+      const { stdout: address } = await execAsync(`cast wallet address --keystore ${keystorePath} --password-file ${passwordFile}`);
       return address.trim();
     } catch (error) {
       logger.warn('Could not get wallet address from cast', { error: error.message });
@@ -374,7 +382,7 @@ class RecallClient extends EventEmitter {
       const balancesResponse = await this._makeApiCall('GET', '/api/agent/balances');
 
       if (balancesResponse.success) {
-        this.accountInfo.balances = balancesResponse.balances;
+        this.accountInfo.balance = balancesResponse.balances;
 
         // ============ Calculate Total Balance in USD ============
         this.accountInfo.totalBalance = balancesResponse.balances.reduce((total, balance) => {
