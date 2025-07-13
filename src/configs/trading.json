@@ -24,8 +24,8 @@
     },
   
     "thresholds": {
-      "buyThreshold": 0.45,
-      "sellThreshold": -0.45,
+      "buyThreshold": 0.35,
+      "sellThreshold": -0.35,
       "confidenceThreshold": 0.5,
       "signalStrengths": {
         "weak": 0.3,
