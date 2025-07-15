@@ -75,6 +75,10 @@ export default async function handler (req, res) {
               </div>
             </div>
             
+            <!-- Try loading Vincent SDK via script tag first -->
+            <script src="https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js" 
+                    onerror="console.log('Script tag failed to load Vincent SDK')"></script>
+            
             <script type="module">
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
@@ -96,9 +100,64 @@ export default async function handler (req, res) {
                 showStatus('🔄 Loading Vincent SDK...', 'loading');
                 
                 try {
-                  // Test Vincent SDK import
+                  // Test Vincent SDK import - try multiple CDNs
                   console.log('Importing Vincent SDK...');
-                  const vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                  let vincentModule;
+                  
+                  try {
+                    // Try jsdelivr first
+                    console.log('Trying jsdelivr CDN...');
+                    vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                  } catch (e1) {
+                    console.log('jsdelivr failed:', e1);
+                    try {
+                      // Try unpkg
+                      console.log('Trying unpkg CDN...');
+                      vincentModule = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                    } catch (e2) {
+                      console.log('unpkg failed:', e2);
+                      try {
+                        // Try ESM.sh
+                        console.log('Trying esm.sh CDN...');
+                        vincentModule = await import('https://esm.sh/@lit-protocol/vincent-app-sdk@1.0.1');
+                      } catch (e3) {
+                        console.log('esm.sh failed:', e3);
+                        try {
+                          // Try without version
+                          console.log('Trying latest version...');
+                          vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                        } catch (e4) {
+                          console.log('All CDNs failed:', e4);
+                          
+                          // Check if Vincent SDK was loaded via script tag
+                          if (window.VincentSDK) {
+                            console.log('Using Vincent SDK from script tag');
+                            vincentModule = window.VincentSDK;
+                          } else {
+                            // Last resort - try to create a manual redirect
+                            console.log('Creating manual redirect as fallback');
+                            showStatus('🔄 Using fallback redirect method...', 'loading');
+                            
+                            // Create a manual redirect to Vincent consent page
+                            // This URL pattern is based on standard OAuth flows
+                            const params = new URLSearchParams({
+                              client_id: appId,
+                              redirect_uri: window.location.href,
+                              response_type: 'code',
+                              scope: 'vincent_consent'
+                            });
+                            
+                            const vincentConsentUrl = \`https://consent.litprotocol.com/authorize?\${params.toString()}\`;
+                            console.log('Manual redirect URL:', vincentConsentUrl);
+                            
+                            showStatus('🔄 Redirecting to Vincent (manual)...', 'loading');
+                            window.location.href = vincentConsentUrl;
+                            return;
+                          }
+                        }
+                      }
+                    }
+                  }
                   console.log('Vincent SDK imported:', vincentModule);
                   
                   const { getVincentWebAppClient, jwt } = vincentModule;
