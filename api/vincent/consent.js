@@ -96,12 +96,17 @@ export default async function handler (req, res) {
                 showStatus('🔄 Loading Vincent SDK...', 'loading');
                 
                 try {
-                  // Import Vincent SDK with cache busting
+                  // Import Vincent SDK with strong cache busting
                   console.log('Importing Vincent SDK...');
+                  const randomId = Math.random().toString(36).substring(7);
                   const timestamp = new Date().getTime();
-                  const vincentUrl = \`https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`;
+                  
+                  // Force completely fresh load with different CDN
+                  const vincentUrl = \`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=\${randomId}&t=\${timestamp}&fresh=1\`;
                   
                   console.log('Loading Vincent SDK from:', vincentUrl);
+                  console.log('This URL should work:', vincentUrl);
+                  
                   const vincentModule = await import(vincentUrl);
                   console.log('Vincent SDK imported:', vincentModule);
                   
