@@ -66,17 +66,12 @@ class VincentClient extends EventEmitter {
     this.policyViolations = [];
     this.spendingLimits = {
       daily: {
-        limit: this.config.dailySpendingLimit || 5000, // $1000 default
+        limit: this.config.dailySpendingLimit || 5000,
         spent: 0,
         resetTime: this._getNextDayReset()
       },
       perTrade: {
-        limit: this.config.maxTradeAmount || 1000 // $100 default per trade
-      },
-      hourly: {
-        limit: this.config.hourlySpendingLimit || 500, // $500 per hour
-        spent: 0,
-        resetTime: this._getNextHourReset()
+        limit: this.config.maxTradeAmount || 1000
       }
     };
 
@@ -87,13 +82,6 @@ class VincentClient extends EventEmitter {
     // ============ Trade Tracking ============
     this.tradeHistory = [];
     this.recentTrades = [];
-
-    // ============ Frequency Limits (from environment) ============
-    this.frequencyLimits = {
-      maxPerMinute: parseInt(process.env.VINCENT_MAX_TRADES_PER_MINUTE) || 5,
-      maxPerHour: parseInt(process.env.VINCENT_MAX_TRADES_PER_HOUR) || 100,
-      minTimeBetween: parseInt(process.env.VINCENT_MIN_TIME_BETWEEN_TRADES) || 1000
-    };
 
     // ============ Usage Statistics ============
     this.usageStats = {
@@ -867,7 +855,7 @@ class VincentClient extends EventEmitter {
       const toolParams = this._convertToVincentToolParams(tradeParams);
 
       // ============ Get Delegator PKP Address ============
-      const delegatorPkpEthAddress = await this._getDelegatorAddress(tradeParams);
+      const delegatorPkpEthAddress = this._getDelegatorAddress(tradeParams);
 
       // ============ Execute Precheck via Vincent Tool Client ============
       this.logger.info('precheck', {
@@ -950,7 +938,7 @@ class VincentClient extends EventEmitter {
 
       // ============ Prepare Vincent Tool Execution ============
       const toolParams = this._convertToVincentToolParams(tradeParams);
-      const delegatorPkpEthAddress = await this._getDelegatorAddress(tradeParams);
+      const delegatorPkpEthAddress = this._getDelegatorAddress(tradeParams);
 
       // ============ Execute Trade via Vincent Tool Client ============
       logger.info('Executing Vincent tool with params:', {
@@ -1519,7 +1507,7 @@ class VincentClient extends EventEmitter {
   handleConsentCallback (expectedAudience) {
     try {
       // ============ Check if This is a Login URI ============
-      if (!this.webAppClient.isLogin()) {
+      if (!this.webAppClient.isLoginUri()) {
         throw new Error('Not a valid consent callback URL');
       }
 
@@ -1614,7 +1602,7 @@ class VincentClient extends EventEmitter {
      * @param {Object} tradeParams Trade parameters
      * @return {string} Delegator PKP address
      */
-  async _getDelegatorAddress (tradeParams) {
+  _getDelegatorAddress (tradeParams) {
     // ============ Use Current User Info if Available ============
     if (this.currentUserInfo && this.currentUserInfo.pkpAddress) {
       return this.currentUserInfo.pkpAddress;

@@ -5,7 +5,6 @@ export default async function handler (req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
   // Handle OPTIONS request
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
@@ -25,16 +24,14 @@ export default async function handler (req, res) {
     if (method === 'GET') {
       // Handle GET callback (authorization code flow)
       // According to Vincent docs, JWT is returned as a URL parameter
-      const { code, state, error, jwt, token, access_token, id_token, vincentJWT } = query;
-      
+      const { code, state, error, jwt, token, access_token, id_token, vincentJWT, vincentLoginJWT, lit_jwt, lit_token } = query;
       // Check for JWT token (various parameter names Vincent might use)
-      const jwtToken = jwt || token || access_token || id_token || vincentJWT;
-      
+      const jwtToken = jwt || token || access_token || id_token || vincentJWT || vincentLoginJWT || lit_jwt || lit_token;
       console.log('Callback parameter analysis:', {
         hasCode: !!code,
         hasJWT: !!jwtToken,
         hasError: !!error,
-        jwtSource: jwt ? 'jwt' : token ? 'token' : access_token ? 'access_token' : id_token ? 'id_token' : vincentJWT ? 'vincentJWT' : 'none',
+        jwtSource: jwt ? 'jwt' : token ? 'token' : access_token ? 'access_token' : id_token ? 'id_token' : vincentJWT ? 'vincentJWT' : vincentLoginJWT ? 'vincentLoginJWT' : lit_jwt ? 'lit_jwt' : lit_token ? 'lit_token' : 'none',
         allParamNames: Object.keys(query),
         queryValues: query
       });
@@ -135,7 +132,7 @@ export default async function handler (req, res) {
                     const vincentAppClient = getVincentWebAppClient({ appId: '${process.env.VINCENT_APP_ID || '983'}' });
                     
                     // Check if this is a login URI (has JWT token) - using correct method name
-                    if (vincentAppClient.isLogin()) {
+                    if (vincentAppClient.isLoginUri()) {
                       statusDiv.innerHTML = '🔄 Processing Vincent JWT token...';
                       
                       try {
@@ -175,11 +172,11 @@ export default async function handler (req, res) {
                       // Check URL fragment
                       const fragment = window.location.hash.substring(1);
                       const fragmentParams = new URLSearchParams(fragment);
-                      const fragmentJWT = fragmentParams.get('jwt') || fragmentParams.get('token') || fragmentParams.get('access_token') || fragmentParams.get('id_token');
+                      const fragmentJWT = fragmentParams.get('jwt') || fragmentParams.get('token') || fragmentParams.get('access_token') || fragmentParams.get('id_token') || fragmentParams.get('vincentJWT') || fragmentParams.get('vincentLoginJWT') || fragmentParams.get('lit_jwt') || fragmentParams.get('lit_token');
                       
                       // Check URL search params
                       const searchParams = new URLSearchParams(window.location.search);
-                      const searchJWT = searchParams.get('jwt') || searchParams.get('token') || searchParams.get('access_token') || searchParams.get('id_token');
+                      const searchJWT = searchParams.get('jwt') || searchParams.get('token') || searchParams.get('access_token') || searchParams.get('id_token') || searchParams.get('vincentJWT') || searchParams.get('vincentLoginJWT') || searchParams.get('lit_jwt') || searchParams.get('lit_token');
                       
                       const jwt = fragmentJWT || searchJWT;
                       
@@ -225,7 +222,6 @@ export default async function handler (req, res) {
 
       // Store the authorization code temporarily (in production, use a proper database)
       console.log('Vincent authorization successful:', { code, state });
-      
       return res.status(200).json({
         success: true,
         message: 'Vincent authorization successful',
@@ -237,22 +233,20 @@ export default async function handler (req, res) {
 
     if (method === 'POST') {
       // Handle POST callback (webhook notifications and consent callbacks)
-      const { type, data, jwt, token, access_token, id_token } = body;
+      const { type, data, jwt, token, access_token, id_token, vincentJWT, vincentLoginJWT, lit_jwt, lit_token } = body;
 
       console.log('Vincent POST callback received:', { 
         type, 
         data, 
-        hasJWT: !!(jwt || token || access_token || id_token),
+        hasJWT: !!(jwt || token || access_token || id_token || vincentJWT || vincentLoginJWT || lit_jwt || lit_token),
         bodyKeys: Object.keys(body)
       });
-      
       // Check if JWT token is directly in the POST body
-      const jwtToken = jwt || token || access_token || id_token;
+      const jwtToken = jwt || token || access_token || id_token || vincentJWT || vincentLoginJWT || lit_jwt || lit_token;
       if (jwtToken) {
         try {
           const fs = await import('fs');
           const path = await import('path');
-          
           const consentData = {
             jwt: jwtToken,
             timestamp: Date.now(),
@@ -261,17 +255,14 @@ export default async function handler (req, res) {
             source: body.source || 'unknown',
             decodedJWT: body.decodedJWT || null
           };
-          
           const consentFilePath = path.join(process.cwd(), '.vincent-consent-callback.json');
           fs.writeFileSync(consentFilePath, JSON.stringify(consentData, null, 2));
-          
           console.log('Vincent consent completed with JWT (POST):', { 
             jwt: jwtToken.substring(0, 50) + '...',
             source: body.source,
             hasDecodedJWT: !!body.decodedJWT,
             timestamp: new Date().toISOString()
           });
-          
           return res.status(200).json({
             success: true,
             message: 'JWT token received and stored successfully'
@@ -284,18 +275,14 @@ export default async function handler (req, res) {
           });
         }
       }
-      
       if (type === 'consent') {
         // Handle consent callback from public page
         try {
           const fs = await import('fs');
           const path = await import('path');
-          
           const consentFilePath = path.join(process.cwd(), '.vincent-consent-callback.json');
           fs.writeFileSync(consentFilePath, JSON.stringify(data, null, 2));
-          
           console.log('Vincent consent callback stored successfully');
-          
           return res.status(200).json({
             success: true,
             message: 'Consent callback processed successfully'
@@ -308,7 +295,6 @@ export default async function handler (req, res) {
           });
         }
       }
-      
       // Process other webhook types
       switch (type) {
         case 'policy_executed':

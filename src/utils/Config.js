@@ -63,7 +63,7 @@ class ConfigManager {
       delegateeWalletName: process.env.VINCENT_DELEGATEE_WALLET_NAME || 'vincent-delegatee',
       maxTradeAmount: parseFloat(process.env.VINCENT_MAX_TRADE_AMOUNT) || 1000,
       tradeExpiryMinutes: parseInt(process.env.VINCENT_TRADE_EXPIRY_MINUTES) || 10,
-      dailySpendingLimit: parseFloat(process.env.VINCENT_DAILY_SPENDING_LIMIT) || 5000,
+      dailySpendingLimit: parseFloat(process.env.VINCENT_SPENDING_LIMIT_DAILY) || 5000,
       litNetwork: process.env.LIT_NETWORK || 'cayenne',
       capacityCreditTokenId: process.env.LIT_CAPACITY_CREDIT_TOKEN_ID
     };

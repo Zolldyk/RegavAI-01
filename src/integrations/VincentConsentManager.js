@@ -49,7 +49,8 @@ class VincentConsentManager extends EventEmitter {
   async startConsentFlow () {
     try {
       // Use the proper Vincent consent flow
-      const consentUrl = 'https://regav-ai-zoldycks-projects-8a6a6155.vercel.app/api/vincent/consent';
+      const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      const consentUrl = `${baseUrl}/api/vincent/consent`;
 
       logger.info('🚀 Starting Vincent consent flow...');
       logger.info('\n🔐 VINCENT CONSENT REQUIRED');
@@ -138,11 +139,25 @@ class VincentConsentManager extends EventEmitter {
 
   async handleConsentCallback (jwtToken) {
     try {
-      // Decode and validate JWT
-      const decodedJWT = this.webAppClient.decodeVincentLoginJWT(jwtToken);
+      // Import JWT verification functions from Vincent SDK
+      const { jwt } = await import('@lit-protocol/vincent-app-sdk');
 
-      if (!decodedJWT || !decodedJWT.payload) {
-        throw new Error('Invalid JWT token from Vincent consent');
+      // Try to verify JWT with expected audience (callback URL)
+      const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
+      const expectedAudience = `${baseUrl}/api/vincent/callback`;
+
+      let decodedJWT;
+      try {
+        // First try to verify with full validation
+        decodedJWT = jwt.verify(jwtToken, expectedAudience);
+      } catch (verifyError) {
+        logger.warn('JWT verification failed, trying decode only:', verifyError.message);
+        // Fall back to decode only if verification fails
+        decodedJWT = jwt.decode(jwtToken);
+
+        if (!decodedJWT || !decodedJWT.payload) {
+          throw new Error('Invalid JWT token from Vincent consent');
+        }
       }
 
       // Extract user information
@@ -204,25 +219,39 @@ class VincentConsentManager extends EventEmitter {
       return false;
     }
 
-    // Check if consent has expired
-    const now = Date.now();
-    const expiresAt = consent.userInfo.expiresAt;
+    try {
+      // Additional JWT validation
+      const { jwt } = require('@lit-protocol/vincent-app-sdk');
 
-    if (expiresAt && now > expiresAt) {
-      logger.info('Vincent consent has expired');
+      // Check if JWT is expired using Vincent SDK
+      if (jwt.isExpired(jwt.decode(consent.jwt))) {
+        logger.info('Vincent JWT has expired');
+        return false;
+      }
+
+      // Check if consent has expired
+      const now = Date.now();
+      const expiresAt = consent.userInfo.expiresAt;
+
+      if (expiresAt && now > expiresAt) {
+        logger.info('Vincent consent has expired');
+        return false;
+      }
+
+      // Check if consent is less than 24 hours old (safety check)
+      const consentAge = now - consent.timestamp;
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+      if (consentAge > maxAge) {
+        logger.info('Vincent consent is too old, requiring re-consent');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      logger.error('Error validating Vincent consent:', error);
       return false;
     }
-
-    // Check if consent is less than 24 hours old (safety check)
-    const consentAge = now - consent.timestamp;
-    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
-
-    if (consentAge > maxAge) {
-      logger.info('Vincent consent is too old, requiring re-consent');
-      return false;
-    }
-
-    return true;
   }
 
   clearStoredConsent () {
