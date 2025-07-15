@@ -77,32 +77,64 @@ export default async function handler(req, res) {
             </div>
             
             <script type="module">
-              import { getVincentWebAppClient, jwt } from 'https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js';
+              let vincentAppClient = null;
               
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
               const consentButton = document.getElementById('consentButton');
               
-              const { isExpired } = jwt;
-              
               function showStatus(message, type = 'loading') {
                 statusDiv.innerHTML = message;
                 statusDiv.className = 'status ' + type;
                 statusDiv.style.display = 'block';
+                console.log('Status:', message, type);
               }
+              
+              // Add immediate click handler for debugging
+              consentButton.addEventListener('click', async () => {
+                console.log('Button clicked!');
+                showStatus('🔄 Initializing Vincent...', 'loading');
+                
+                try {
+                  if (!vincentAppClient) {
+                    showStatus('❌ Vincent client not initialized', 'error');
+                    return;
+                  }
+                  
+                  console.log('Redirecting to Vincent consent page...');
+                  showStatus('🔄 Redirecting to Vincent...', 'loading');
+                  
+                  // Use the current page as the redirect URI so Vincent redirects back here
+                  vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
+                } catch (error) {
+                  console.error('Error in button click:', error);
+                  showStatus('❌ Error: ' + error.message, 'error');
+                }
+              });
               
               async function initVincent() {
                 try {
-                  const vincentAppClient = getVincentWebAppClient({ appId });
+                  showStatus('🔄 Loading Vincent SDK...', 'loading');
                   
-                  // Check if we're returning from Vincent with a JWT (using correct method name)
+                  // Import Vincent SDK
+                  const vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                  console.log('Vincent SDK loaded:', vincentModule);
+                  
+                  const { getVincentWebAppClient, jwt } = vincentModule;
+                  const { isExpired } = jwt;
+                  
+                  console.log('Creating Vincent client with appId:', appId);
+                  vincentAppClient = getVincentWebAppClient({ appId });
+                  console.log('Vincent client created:', vincentAppClient);
+                  
+                  // Check if we're returning from Vincent with a JWT
                   if (vincentAppClient.isLogin()) {
                     showStatus('🔄 Processing Vincent consent...', 'loading');
                     
                     try {
-                      // According to Vincent docs, use redirectUrl as the expected audience
-                      const result = vincentAppClient.decodeVincentLoginJWT(window.location.href);
+                      // According to Vincent docs, use the origin as the expected audience
+                      const result = vincentAppClient.decodeVincentLoginJWT(window.location.origin);
                       
                       if (result) {
                         const { decodedJWT, jwtStr } = result;
@@ -143,12 +175,8 @@ export default async function handler(req, res) {
                     const expired = storedJwt ? isExpired(storedJwt) : true;
                     
                     if (!storedJwt || expired) {
-                      // Set up consent button
-                      consentButton.addEventListener('click', () => {
-                        showStatus('🔄 Redirecting to Vincent...', 'loading');
-                        // Use the callback URL as the redirect URI
-                        vincentAppClient.redirectToConsentPage({ redirectUri: '${redirectUrl}' });
-                      });
+                      showStatus('✅ Ready to grant permissions. Click the button above.', 'success');
+                      console.log('Button is ready for clicking');
                     } else {
                       showStatus('✅ Already authenticated with Vincent', 'success');
                     }
@@ -160,6 +188,7 @@ export default async function handler(req, res) {
               }
               
               // Initialize when page loads
+              console.log('Page loaded, initializing Vincent...');
               initVincent();
             </script>
           </body>
