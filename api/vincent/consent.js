@@ -94,12 +94,16 @@ export default async function handler(req, res) {
               // Add immediate click handler for debugging
               consentButton.addEventListener('click', async () => {
                 console.log('Button clicked!');
-                showStatus('🔄 Initializing Vincent...', 'loading');
+                showStatus('🔄 Checking Vincent client...', 'loading');
                 
                 try {
                   if (!vincentAppClient) {
-                    showStatus('❌ Vincent client not initialized', 'error');
-                    return;
+                    showStatus('❌ Vincent client not initialized. Trying to initialize...', 'error');
+                    await initVincent();
+                    if (!vincentAppClient) {
+                      showStatus('❌ Failed to initialize Vincent client', 'error');
+                      return;
+                    }
                   }
                   
                   console.log('Redirecting to Vincent consent page...');
@@ -117,8 +121,20 @@ export default async function handler(req, res) {
                 try {
                   showStatus('🔄 Loading Vincent SDK...', 'loading');
                   
-                  // Import Vincent SDK
-                  const vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                  // Try multiple CDN sources for Vincent SDK
+                  let vincentModule;
+                  try {
+                    vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                  } catch (e) {
+                    console.warn('CDN 1 failed, trying alternative:', e);
+                    try {
+                      vincentModule = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                    } catch (e2) {
+                      console.warn('CDN 2 failed, trying latest:', e2);
+                      vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                    }
+                  }
+                  
                   console.log('Vincent SDK loaded:', vincentModule);
                   
                   const { getVincentWebAppClient, jwt } = vincentModule;
@@ -128,8 +144,8 @@ export default async function handler(req, res) {
                   vincentAppClient = getVincentWebAppClient({ appId });
                   console.log('Vincent client created:', vincentAppClient);
                   
-                  // Check if we're returning from Vincent with a JWT
-                  if (vincentAppClient.isLogin()) {
+                  // Check if we're returning from Vincent with a JWT (using correct method name)
+                  if (vincentAppClient.isLoginUri()) {
                     showStatus('🔄 Processing Vincent consent...', 'loading');
                     
                     try {
@@ -184,6 +200,21 @@ export default async function handler(req, res) {
                 } catch (error) {
                   console.error('Error initializing Vincent:', error);
                   showStatus('❌ Error initializing Vincent: ' + error.message, 'error');
+                  
+                  // Fallback: try to create a simple redirect without SDK
+                  console.log('Attempting fallback redirect...');
+                  vincentAppClient = {
+                    redirectToConsentPage: ({ redirectUri }) => {
+                      // Manual redirect to Vincent consent page
+                      const vincentUrl = \`https://explorer.litprotocol.com/consent?\${new URLSearchParams({
+                        app_id: appId,
+                        redirect_uri: redirectUri
+                      }).toString()}\`;
+                      console.log('Fallback redirect to:', vincentUrl);
+                      window.location.href = vincentUrl;
+                    }
+                  };
+                  showStatus('⚠️ Using fallback method. Click the button to continue.', 'success');
                 }
               }
               
