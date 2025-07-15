@@ -75,10 +75,6 @@ export default async function handler (req, res) {
               </div>
             </div>
             
-            <!-- Try loading Vincent SDK via script tag first -->
-            <script src="https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js" 
-                    onerror="console.log('Script tag failed to load Vincent SDK')"></script>
-            
             <script type="module">
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
@@ -129,31 +125,9 @@ export default async function handler (req, res) {
                         } catch (e4) {
                           console.log('All CDNs failed:', e4);
                           
-                          // Check if Vincent SDK was loaded via script tag
-                          if (window.VincentSDK) {
-                            console.log('Using Vincent SDK from script tag');
-                            vincentModule = window.VincentSDK;
-                          } else {
-                            // Last resort - try to create a manual redirect
-                            console.log('Creating manual redirect as fallback');
-                            showStatus('🔄 Using fallback redirect method...', 'loading');
-                            
-                            // Create a manual redirect to Vincent consent page
-                            // This URL pattern is based on standard OAuth flows
-                            const params = new URLSearchParams({
-                              client_id: appId,
-                              redirect_uri: window.location.href,
-                              response_type: 'code',
-                              scope: 'vincent_consent'
-                            });
-                            
-                            const vincentConsentUrl = \`https://consent.litprotocol.com/authorize?\${params.toString()}\`;
-                            console.log('Manual redirect URL:', vincentConsentUrl);
-                            
-                            showStatus('🔄 Redirecting to Vincent (manual)...', 'loading');
-                            window.location.href = vincentConsentUrl;
-                            return;
-                          }
+                          // All CDN methods failed - Vincent SDK unavailable
+                          console.log('Vincent SDK not available from any CDN');
+                          throw new Error('Vincent SDK could not be loaded from any CDN source');
                         }
                       }
                     }
