@@ -76,7 +76,7 @@ export default async function handler (req, res) {
             </div>
             
             <!-- Try loading Vincent SDK via script tag first -->
-            <script src="https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js" 
+            <script src="https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js" 
                     onerror="console.log('Script tag failed to load Vincent SDK')"></script>
             
             <script type="module">
@@ -107,25 +107,25 @@ export default async function handler (req, res) {
                   try {
                     // Try jsdelivr first
                     console.log('Trying jsdelivr CDN...');
-                    vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                    vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
                   } catch (e1) {
                     console.log('jsdelivr failed:', e1);
                     try {
                       // Try unpkg
                       console.log('Trying unpkg CDN...');
-                      vincentModule = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                      vincentModule = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
                     } catch (e2) {
                       console.log('unpkg failed:', e2);
                       try {
                         // Try ESM.sh
                         console.log('Trying esm.sh CDN...');
-                        vincentModule = await import('https://esm.sh/@lit-protocol/vincent-app-sdk@1.0.1');
+                        vincentModule = await import('https://esm.sh/@lit-protocol/vincent-app-sdk@1.0.2');
                       } catch (e3) {
                         console.log('esm.sh failed:', e3);
                         try {
                           // Try without version
                           console.log('Trying latest version...');
-                          vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                          vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/src/index.js');
                         } catch (e4) {
                           console.log('All CDNs failed:', e4);
                           
