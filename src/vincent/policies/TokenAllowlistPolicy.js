@@ -19,7 +19,7 @@ const userParamsSchema = z.object({
     '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', // WETH
     '0xdAC17F958D2ee523a2206206994597C13D831ec7', // USDT
     '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC
-    '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4'  // SOL (wrapped)
+    '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4' // SOL (wrapped)
   ]),
   allowedChains: z.array(z.number()).default([1, 10, 42161, 8453, 137]), // Multi-chain support
   strictMode: z.boolean().default(true), // Strict enforcement
@@ -78,14 +78,14 @@ const evalDenyResultSchema = z.object({
 /**
  * Normalize token address to lowercase
  */
-function normalizeTokenAddress(address) {
+function normalizeTokenAddress (address) {
   return address.toLowerCase();
 }
 
 /**
  * Check if token is in allowlist
  */
-function isTokenAllowed(tokenAddress, allowedTokens) {
+function isTokenAllowed (tokenAddress, allowedTokens) {
   const normalizedAddress = normalizeTokenAddress(tokenAddress);
   const normalizedAllowlist = allowedTokens.map(addr => normalizeTokenAddress(addr));
   return normalizedAllowlist.includes(normalizedAddress);
@@ -94,54 +94,54 @@ function isTokenAllowed(tokenAddress, allowedTokens) {
 /**
  * Get token category
  */
-function getTokenCategory(tokenAddress, userParams) {
+function getTokenCategory (tokenAddress, userParams) {
   const normalizedAddress = normalizeTokenAddress(tokenAddress);
   const { tokenCategories } = userParams;
-  
+
   if (!tokenCategories) return 'unknown';
-  
+
   for (const [category, tokens] of Object.entries(tokenCategories)) {
     if (tokens && tokens.map(t => normalizeTokenAddress(t)).includes(normalizedAddress)) {
       return category;
     }
   }
-  
+
   return 'unknown';
 }
 
 /**
  * Get suggested alternative tokens
  */
-function getSuggestedAlternatives(tokenAddress, userParams) {
+function getSuggestedAlternatives (tokenAddress, userParams) {
   const { allowedTokens, tokenCategories } = userParams;
-  
+
   // For denied tokens, suggest similar category tokens
   const tokenCategory = getTokenCategory(tokenAddress, userParams);
-  
+
   if (tokenCategory === 'unknown') {
     // Return first 3 allowed tokens as alternatives
     return allowedTokens.slice(0, 3);
   }
-  
+
   // Return tokens from same category
   if (tokenCategories && tokenCategories[tokenCategory]) {
     return tokenCategories[tokenCategory].slice(0, 3);
   }
-  
+
   return allowedTokens.slice(0, 3);
 }
 
 /**
  * Verify token contract (simplified implementation)
  */
-async function verifyTokenContract(tokenAddress, chainId) {
+async function verifyTokenContract (tokenAddress, chainId) {
   try {
     // In production, this would verify:
     // - Contract exists and is not a proxy to malicious code
     // - Token implements ERC20 standard
     // - Token is not on known scam lists
     // - Token has sufficient liquidity
-    
+
     // Known verified tokens for major chains
     const verifiedTokens = {
       1: [ // Ethereum
@@ -149,19 +149,18 @@ async function verifyTokenContract(tokenAddress, chainId) {
         '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', // WETH
         '0xdac17f958d2ee523a2206206994597c13d831ec7', // USDT
         '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC
-        '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4'  // SOL
+        '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4' // SOL
       ]
     };
-    
+
     const chainTokens = verifiedTokens[chainId] || [];
     const normalizedAddress = normalizeTokenAddress(tokenAddress);
-    
+
     return {
       verified: chainTokens.includes(normalizedAddress),
       symbol: getTokenSymbol(tokenAddress),
       name: getTokenName(tokenAddress)
     };
-    
   } catch (error) {
     return {
       verified: false,
@@ -174,7 +173,7 @@ async function verifyTokenContract(tokenAddress, chainId) {
 /**
  * Get token symbol (simplified)
  */
-function getTokenSymbol(tokenAddress) {
+function getTokenSymbol (tokenAddress) {
   const tokenSymbols = {
     '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': 'WBTC',
     '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': 'WETH',
@@ -182,14 +181,14 @@ function getTokenSymbol(tokenAddress) {
     '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': 'USDC',
     '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4': 'SOL'
   };
-  
+
   return tokenSymbols[normalizeTokenAddress(tokenAddress)] || 'UNKNOWN';
 }
 
 /**
  * Get token name (simplified)
  */
-function getTokenName(tokenAddress) {
+function getTokenName (tokenAddress) {
   const tokenNames = {
     '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599': 'Wrapped Bitcoin',
     '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': 'Wrapped Ether',
@@ -197,14 +196,14 @@ function getTokenName(tokenAddress) {
     '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': 'USD Coin',
     '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4': 'Wrapped SOL'
   };
-  
+
   return tokenNames[normalizeTokenAddress(tokenAddress)] || 'Unknown Token';
 }
 
 /**
  * Check if chain is supported
  */
-function isChainSupported(chainId, allowedChains) {
+function isChainSupported (chainId, allowedChains) {
   return allowedChains.includes(chainId);
 }
 
@@ -225,7 +224,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported. Allowed chains: ${allowedChains.join(', ')}`,
@@ -239,7 +238,7 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Check Token Allowlist ============
       const isAllowed = isTokenAllowed(tokenAddress, allowedTokens);
-      
+
       if (!isAllowed && strictMode && !allowUnknownTokens) {
         return policyContext.deny({
           reason: `Token ${tokenAddress} not in allowlist`,
@@ -253,10 +252,10 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Verify Token Contract ============
       let tokenVerification = { verified: true, symbol: 'UNKNOWN', name: 'Unknown' };
-      
+
       if (requireTokenVerification) {
         tokenVerification = await verifyTokenContract(tokenAddress, chainId);
-        
+
         if (!tokenVerification.verified && strictMode) {
           return policyContext.deny({
             reason: `Token ${tokenAddress} failed verification checks`,
@@ -284,7 +283,6 @@ export const vincentPolicy = createVincentPolicy({
         tokenSymbol: tokenVerification.symbol,
         tokenName: tokenVerification.name
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy precheck error: ${error.message}`,
@@ -308,7 +306,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported for token transactions`,
@@ -321,7 +319,7 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Check Token Allowlist ============
       const isAllowed = isTokenAllowed(tokenAddress, allowedTokens);
-      
+
       if (!isAllowed && strictMode && !allowUnknownTokens) {
         return policyContext.deny({
           reason: `Token ${tokenAddress} is not in the approved allowlist`,
@@ -335,11 +333,11 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Verify Token Contract ============
       let verificationStatus = 'not_required';
-      
+
       if (requireTokenVerification) {
         const tokenVerification = await verifyTokenContract(tokenAddress, chainId);
         verificationStatus = tokenVerification.verified ? 'verified' : 'failed';
-        
+
         if (!tokenVerification.verified && strictMode) {
           return policyContext.deny({
             reason: `Token ${tokenAddress} failed security verification`,
@@ -364,7 +362,6 @@ export const vincentPolicy = createVincentPolicy({
         timestamp,
         verificationStatus
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy evaluation error: ${error.message}`,

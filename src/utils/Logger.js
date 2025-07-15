@@ -135,8 +135,19 @@ class Logger {
      * @dev Creates specialized loggers for different components
      */
   initializeLoggers () {
-    const logLevel = config.get('app.logLevel');
-    const isProduction = config.isProduction();
+    // Use lazy config access to avoid circular dependency
+    let logLevel = 'info';
+    let isProduction = false;
+    try {
+      if (config) {
+        logLevel = config.get('app.logLevel');
+        isProduction = config.isProduction();
+      }
+    } catch (error) {
+      // Use defaults if config not available
+      logLevel = process.env.LOG_LEVEL || 'info';
+      isProduction = process.env.NODE_ENV === 'production';
+    }
 
     // Main application logger
     this.loggers.main = this.createMainLogger(logLevel, isProduction);

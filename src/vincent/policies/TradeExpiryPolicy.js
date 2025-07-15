@@ -96,53 +96,48 @@ const commitDenyResultSchema = z.object({
 /**
  * Calculate effective expiry time based on order type
  */
-function getEffectiveExpiryTime(orderType, userParams) {
+function getEffectiveExpiryTime (orderType, userParams) {
   const { expiryTimeSeconds, orderTypeExpiryOverrides } = userParams;
-  
+
   if (orderTypeExpiryOverrides && orderTypeExpiryOverrides[orderType]) {
     return orderTypeExpiryOverrides[orderType];
   }
-  
+
   return expiryTimeSeconds;
 }
 
 /**
  * Validate expiry time against min/max bounds
  */
-function validateExpiryTime(expiryTimeSeconds, userParams) {
+function validateExpiryTime (expiryTimeSeconds, userParams) {
   const { minExpiryTimeSeconds, maxExpiryTimeSeconds } = userParams;
-  
+
   if (expiryTimeSeconds < minExpiryTimeSeconds) {
     throw new Error(`Expiry time ${expiryTimeSeconds}s is below minimum ${minExpiryTimeSeconds}s`);
   }
-  
+
   if (expiryTimeSeconds > maxExpiryTimeSeconds) {
     throw new Error(`Expiry time ${expiryTimeSeconds}s exceeds maximum ${maxExpiryTimeSeconds}s`);
   }
-  
+
   return true;
 }
 
-/**
- * Check if order has expired
- */
-function isOrderExpired(orderCreatedAt, expiryTimeSeconds, currentTimestamp) {
-  const deadlineTimestamp = orderCreatedAt + (expiryTimeSeconds * 1000);
-  return currentTimestamp > deadlineTimestamp;
-}
+// Helper functions for future use
+// function _isOrderExpired (orderCreatedAt, expiryTimeSeconds, currentTimestamp) {
+//   const deadlineTimestamp = orderCreatedAt + (expiryTimeSeconds * 1000);
+//   return currentTimestamp > deadlineTimestamp;
+// }
 
-/**
- * Calculate time remaining until expiry
- */
-function getTimeRemaining(orderCreatedAt, expiryTimeSeconds, currentTimestamp) {
-  const deadlineTimestamp = orderCreatedAt + (expiryTimeSeconds * 1000);
-  return Math.max(0, deadlineTimestamp - currentTimestamp);
-}
+// function _getTimeRemaining (orderCreatedAt, expiryTimeSeconds, currentTimestamp) {
+//   const deadlineTimestamp = orderCreatedAt + (expiryTimeSeconds * 1000);
+//   return Math.max(0, deadlineTimestamp - currentTimestamp);
+// }
 
 /**
  * Check if chain is supported
  */
-function isChainSupported(chainId, allowedChains) {
+function isChainSupported (chainId, allowedChains) {
   return allowedChains.includes(chainId);
 }
 
@@ -164,7 +159,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported. Allowed chains: ${allowedChains.join(', ')}`,
@@ -180,13 +175,13 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Determine Order Creation Time ============
       const actualOrderCreatedAt = orderCreatedAt || currentTimestamp;
-      
+
       // ============ Get Effective Expiry Time ============
       const effectiveExpiryTime = getEffectiveExpiryTime(orderType, userParams);
-      
+
       // ============ Validate Expiry Time ============
       validateExpiryTime(effectiveExpiryTime, userParams);
-      
+
       // ============ Check for Custom Deadline ============
       let deadlineTimestamp;
       if (deadline) {
@@ -222,7 +217,6 @@ export const vincentPolicy = createVincentPolicy({
         isExpired: false,
         chainSupported: true
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy precheck error: ${error.message}`,
@@ -248,7 +242,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported for trading`,
@@ -264,13 +258,13 @@ export const vincentPolicy = createVincentPolicy({
 
       // ============ Determine Order Creation Time ============
       const actualOrderCreatedAt = orderCreatedAt || currentTimestamp;
-      
+
       // ============ Get Effective Expiry Time ============
       const effectiveExpiryTime = getEffectiveExpiryTime(orderType, userParams);
-      
+
       // ============ Validate Expiry Time ============
       validateExpiryTime(effectiveExpiryTime, userParams);
-      
+
       // ============ Check for Custom Deadline ============
       let deadlineTimestamp;
       if (deadline) {
@@ -285,7 +279,7 @@ export const vincentPolicy = createVincentPolicy({
 
       if (isExpired && enforceStrictExpiry) {
         const expiredBy = currentTimestamp - deadlineTimestamp;
-        
+
         return policyContext.deny({
           reason: `Order expired ${Math.round(expiredBy / 1000)} seconds ago`,
           expiryTimeSeconds: effectiveExpiryTime,
@@ -308,7 +302,6 @@ export const vincentPolicy = createVincentPolicy({
         orderType: orderType || 'market',
         timestamp: currentTimestamp
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy evaluation error: ${error.message}`,
@@ -328,20 +321,19 @@ export const vincentPolicy = createVincentPolicy({
   commitAllowResultSchema,
   commitDenyResultSchema,
   commit: async (params, policyContext) => {
-    const { orderExecutedAt, executionTimestamp, transactionHash, chainId } = params;
+    const { executionTimestamp, transactionHash } = params;
 
     try {
       // ============ Record Successful Execution ============
       // In a real implementation, this would store execution data
       // and potentially cancel any pending orders
-      
+
       return policyContext.allow({
         orderCancelled: false, // Order was executed, not cancelled
         executionRecorded: true,
         executionTimestamp,
         transactionHash
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Failed to commit order execution: ${error.message}`,

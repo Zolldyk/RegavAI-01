@@ -4,6 +4,7 @@ import Joi from 'joi';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync, existsSync } from 'fs';
+import logger from './Logger.js';
 
 // Load environment variables
 dotenv.config();
@@ -274,7 +275,7 @@ class ConfigManager {
         this.config.trading = { ...this.config.trading, ...tradingConfig };
       }
     } catch (error) {
-      console.warn('Could not load trading.json configuration:', error.message);
+      logger.warn('Could not load trading.json configuration:', error.message);
     }
 
     // Load network configurations
@@ -285,7 +286,7 @@ class ConfigManager {
         this.config.networks = { ...this.config.networks, ...networksConfig };
       }
     } catch (error) {
-      console.warn('Could not load networks.json configuration:', error.message);
+      logger.warn('Could not load networks.json configuration:', error.message);
     }
 
     // Load technical indicators configuration
@@ -299,7 +300,7 @@ class ConfigManager {
         };
       }
     } catch (error) {
-      console.warn('Could not load indicators.json configuration:', error.message);
+      logger.warn('Could not load indicators.json configuration:', error.message);
     }
   }
 

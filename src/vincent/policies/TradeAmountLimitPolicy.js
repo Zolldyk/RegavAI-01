@@ -61,24 +61,23 @@ const evalDenyResultSchema = z.object({
 /**
  * Get token price in USD from multiple sources
  */
-async function getTokenPriceUSD(tokenAddress, chainId) {
+async function getTokenPriceUSD (tokenAddress, _chainId) {
   try {
     // Simple price mapping for major tokens (in production, use proper oracle)
     const tokenPrices = {
       // Ethereum Mainnet
       '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2': 2000, // WETH
-      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': 1,    // USDC
-      '0xdAC17F958D2ee523a2206206994597C13D831ec7': 1,    // USDT
+      '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': 1, // USDC
+      '0xdAC17F958D2ee523a2206206994597C13D831ec7': 1, // USDT
       '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599': 45000, // WBTC
-      '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4': 100   // SOL (wrapped)
+      '0x7dff46370e9ea5f0bad3c4e29711ad50062ea7a4': 100 // SOL (wrapped)
     };
 
     // Normalize address
     const normalizedAddress = tokenAddress.toLowerCase();
-    
+
     // Return price or default to 1 USD for unknown tokens
     return tokenPrices[normalizedAddress] || 1;
-    
   } catch (error) {
     console.warn(`Failed to get token price for ${tokenAddress}:`, error.message);
     return 1; // Default to 1 USD if price fetch fails
@@ -88,7 +87,7 @@ async function getTokenPriceUSD(tokenAddress, chainId) {
 /**
  * Convert token amount to USD value
  */
-async function convertToUSD(tokenAddress, amount, chainId) {
+async function convertToUSD (tokenAddress, amount, chainId) {
   const tokenPrice = await getTokenPriceUSD(tokenAddress, chainId);
   return amount * tokenPrice;
 }
@@ -96,7 +95,7 @@ async function convertToUSD(tokenAddress, amount, chainId) {
 /**
  * Check if chain is supported
  */
-function isChainSupported(chainId, allowedChains) {
+function isChainSupported (chainId, allowedChains) {
   return allowedChains.includes(chainId);
 }
 
@@ -117,7 +116,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported. Allowed chains: ${allowedChains.join(', ')}`,
@@ -138,7 +137,7 @@ export const vincentPolicy = createVincentPolicy({
 
       if (!withinLimit) {
         const exceededBy = requestedAmountUSD - maxTradeAmount;
-        
+
         return policyContext.deny({
           reason: `Trade amount $${requestedAmountUSD.toFixed(2)} exceeds limit of $${maxTradeAmount}`,
           maxTradeAmount,
@@ -159,7 +158,6 @@ export const vincentPolicy = createVincentPolicy({
         chainSupported: true,
         allowedChains
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy precheck error: ${error.message}`,
@@ -184,7 +182,7 @@ export const vincentPolicy = createVincentPolicy({
     try {
       // ============ Check Chain Support ============
       const chainSupported = isChainSupported(chainId, allowedChains);
-      
+
       if (!chainSupported) {
         return policyContext.deny({
           reason: `Chain ${chainId} not supported for trading`,
@@ -202,7 +200,7 @@ export const vincentPolicy = createVincentPolicy({
       // ============ Check Trade Amount Limit ============
       if (requestedAmountUSD > maxTradeAmount) {
         const exceededBy = requestedAmountUSD - maxTradeAmount;
-        
+
         return policyContext.deny({
           reason: `Trade amount $${requestedAmountUSD.toFixed(2)} exceeds maximum allowed $${maxTradeAmount}`,
           maxTradeAmount,
@@ -221,7 +219,6 @@ export const vincentPolicy = createVincentPolicy({
         chainId,
         timestamp
       });
-
     } catch (error) {
       return policyContext.deny({
         reason: `Policy evaluation error: ${error.message}`,

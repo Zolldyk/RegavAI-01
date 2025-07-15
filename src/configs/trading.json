@@ -12,10 +12,7 @@
         "ETH/USDT", 
         "SOL/USDC",
         "XRP/USDT",
-        "WETH/USDC",
-        "DOGE/USDT",
-        "WIF/USDT",
-        "SHIB/USDT"
+        "DOGE/USDT"
       ],
       "maxConcurrentTrades": 12,
       "basePositionSize": 0.18,

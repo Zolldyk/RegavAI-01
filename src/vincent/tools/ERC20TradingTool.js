@@ -2,7 +2,7 @@
 // Official Vincent ERC20 Trading Tool Implementation
 // ============================================================================
 
-import { createVincentTool, createVincentToolPolicy, supportedPoliciesForTool } from '@lit-protocol/vincent-tool-sdk';
+import { createVincentTool, supportedPoliciesForTool } from '@lit-protocol/vincent-tool-sdk';
 import { z } from 'zod';
 import { ethers } from 'ethers';
 
@@ -63,7 +63,7 @@ const executeFailSchema = z.object({
 /**
  * Get ERC20 token balance for an address
  */
-async function getErc20TokenBalance(userAddress, tokenAddress) {
+async function getErc20TokenBalance (userAddress, tokenAddress) {
   try {
     const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
     const tokenContract = new ethers.Contract(
@@ -74,12 +74,12 @@ async function getErc20TokenBalance(userAddress, tokenAddress) {
       ],
       provider
     );
-    
+
     const [balance, decimals] = await Promise.all([
       tokenContract.balanceOf(userAddress),
       tokenContract.decimals()
     ]);
-    
+
     return parseFloat(ethers.utils.formatUnits(balance, decimals));
   } catch (error) {
     throw new Error(`Failed to get token balance: ${error.message}`);
@@ -89,7 +89,7 @@ async function getErc20TokenBalance(userAddress, tokenAddress) {
 /**
  * Get native token (ETH) balance for an address
  */
-async function getNativeTokenBalance(userAddress) {
+async function getNativeTokenBalance (userAddress) {
   try {
     const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
     const balance = await provider.getBalance(userAddress);
@@ -102,7 +102,7 @@ async function getNativeTokenBalance(userAddress) {
 /**
  * Create ERC20 transfer transaction
  */
-function createErc20TransferTransaction(tokenAddress, recipientAddress, amountToSend) {
+function createErc20TransferTransaction (tokenAddress, recipientAddress, amountToSend) {
   const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
   const tokenContract = new ethers.Contract(
     tokenAddress,
@@ -112,7 +112,7 @@ function createErc20TransferTransaction(tokenAddress, recipientAddress, amountTo
     ],
     provider
   );
-  
+
   return {
     contract: tokenContract,
     method: 'transfer',
@@ -147,7 +147,7 @@ export const vincentTool = createVincentTool({
   precheckSuccessSchema,
   precheckFailSchema,
   precheck: async ({ toolParams }, toolContext) => {
-    const { tokenAddress, amountToSend, recipientAddress, chainId } = toolParams;
+    const { tokenAddress, amountToSend, recipientAddress } = toolParams;
     const userAddress = toolContext.delegation.delegatorPkpInfo.ethAddress;
 
     try {
@@ -168,7 +168,7 @@ export const vincentTool = createVincentTool({
 
       // ============ Check Token Balance ============
       const erc20TokenBalance = await getErc20TokenBalance(userAddress, tokenAddress);
-      
+
       if (erc20TokenBalance < amountToSend) {
         return toolContext.fail({
           reason: 'Insufficient token balance',
@@ -187,16 +187,15 @@ export const vincentTool = createVincentTool({
 
       let estimatedGas;
       let gasPrice;
-      
+
       try {
         // Estimate gas for the transaction
         estimatedGas = await transferTransaction.estimateGas();
-        
+
         // Get current gas price
         const provider = new ethers.providers.JsonRpcProvider(process.env.ETH_RPC_URL);
         gasPrice = await provider.getGasPrice();
         gasPrice = parseFloat(ethers.utils.formatUnits(gasPrice, 'gwei'));
-        
       } catch (gasError) {
         if (gasError.code === 'UNPREDICTABLE_GAS_LIMIT') {
           return toolContext.fail({
@@ -233,7 +232,6 @@ export const vincentTool = createVincentTool({
         canExecute: true,
         estimatedCost: estimatedGasCost
       });
-
     } catch (error) {
       return toolContext.fail({
         reason: `Precheck failed: ${error.message}`,
@@ -247,7 +245,6 @@ export const vincentTool = createVincentTool({
   executeFailSchema,
   execute: async ({ toolParams }, toolContext) => {
     const { tokenAddress, amountToSend, recipientAddress, deadline } = toolParams;
-    const startTime = Date.now();
 
     try {
       // ============ Check Deadline ============
@@ -325,7 +322,6 @@ export const vincentTool = createVincentTool({
         timestamp: Date.now(),
         policyCommitments
       });
-
     } catch (error) {
       return toolContext.fail({
         error: `Execution failed: ${error.message}`,

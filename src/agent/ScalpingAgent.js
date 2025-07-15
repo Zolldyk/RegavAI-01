@@ -139,7 +139,7 @@ export class ScalpingAgent {
       await this._recordStartingBalance();
 
       // ============ Setup Competition Timer ============
-      this._setupCompetitionTimer();
+      // this._setupCompetitionTimer(); // Disabled - manual control only
 
       // ============ Start Trading Strategy ============
       await this.tradingStrategy.start();

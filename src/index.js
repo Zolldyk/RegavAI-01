@@ -8,7 +8,7 @@ import VincentClient from './integrations/VincentClient.js';
 import GaiaClient from './integrations/Gaia.Client.js';
 import { TradingStrategy } from './agent/TradingStrategy.js';
 import { RiskManager } from './agent/RiskManager.js';
-import Logger from './utils/Logger.js';
+import logger from './utils/Logger.js';
 // import config from './utils/Config.js';
 import { readFileSync } from 'fs';
 
@@ -86,7 +86,7 @@ const HEALTH_CHECK_INTERVAL = 60000; // 1 minute health checks
 class EnhancedTradingAgent {
   constructor () {
     // ============ Core Components ============
-    this.logger = new Logger('EnhancedTradingAgent');
+    this.logger = logger;
     this.errorHandler = new ErrorHandler(this.logger);
     this.performanceMonitor = new PerformanceMonitor(this.logger);
 
@@ -217,9 +217,13 @@ class EnhancedTradingAgent {
       this.recallClient = getRecallClient();
       this.logger.info('✅ Recall client initialized');
 
-      // ============ Initialize Vincent Client ============
+      // ============ Initialize Vincent Client with Consent Flow ============
       this.logger.info('Initializing Vincent client...');
       this.vincentClient = getVincentClient();
+      await this.vincentClient.initialize();
+
+      // ============ Handle Vincent Consent Requirements ============
+      await this._handleVincentConsent();
       this.logger.info('✅ Vincent client initialized');
 
       // ============ Initialize Gaia Client ============
@@ -233,6 +237,83 @@ class EnhancedTradingAgent {
       this.logger.error('❌ Failed to initialize clients', { error: error.message });
       throw error;
     }
+  }
+
+  /**
+     * @notice Handle Vincent consent flow for automated trading
+     * @dev Checks for existing consent or initiates consent flow
+     */
+  async _handleVincentConsent () {
+    this.logger.info('🔑 Checking Vincent consent status...');
+
+    try {
+      // ============ Check if Vincent client has consent manager ============
+      if (!this.vincentClient.consentManager) {
+        this.logger.warn('Vincent consent manager not available, skipping consent check');
+        return;
+      }
+
+      // ============ Initialize consent manager and check for existing consent ============
+      const hasExistingConsent = await this.vincentClient.consentManager.initialize();
+
+      if (hasExistingConsent) {
+        this.logger.info('✅ Vincent consent already exists, proceeding with trading');
+        return;
+      }
+
+      // ============ Need to obtain consent - start consent flow ============
+      this.logger.info('🔐 Vincent consent required, starting consent flow...');
+
+      // ============ Start consent flow ============
+      await this.vincentClient.consentManager.startConsentFlow();
+
+      // ============ Wait for consent completion ============
+      await this._waitForVincentConsent();
+
+      this.logger.info('✅ Vincent consent flow completed successfully');
+    } catch (error) {
+      this.logger.error('❌ Failed to handle Vincent consent', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+     * @notice Wait for Vincent consent to complete
+     * @dev Handles consent completion and timeout scenarios
+     */
+  async _waitForVincentConsent () {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.logger.error('Vincent consent timeout after 10 minutes');
+        reject(new Error('Vincent consent timeout'));
+      }, 600000); // 10 minutes timeout
+
+      // ============ Listen for consent completion ============
+      this.vincentClient.consentManager.once('consent_completed', (userInfo) => {
+        clearTimeout(timeout);
+        this.logger.info('🎉 Vincent consent completed!', {
+          pkpTokenId: userInfo.pkpTokenId,
+          pkpAddress: userInfo.pkpAddress
+        });
+        resolve(userInfo);
+      });
+
+      // ============ Listen for consent timeout ============
+      this.vincentClient.consentManager.once('consent_timeout', () => {
+        clearTimeout(timeout);
+        reject(new Error('Vincent consent flow timed out'));
+      });
+
+      // ============ Listen for consent ready (existing consent) ============
+      this.vincentClient.consentManager.once('consent_ready', (userInfo) => {
+        clearTimeout(timeout);
+        this.logger.info('✅ Vincent consent ready', {
+          pkpTokenId: userInfo.pkpTokenId,
+          pkpAddress: userInfo.pkpAddress
+        });
+        resolve(userInfo);
+      });
+    });
   }
 
   /**
@@ -280,7 +361,6 @@ class EnhancedTradingAgent {
         logger: this.logger
       });
 
-      await this.riskManager.initialize();
       this.logger.info('✅ Risk management system initialized');
     } catch (error) {
       this.logger.error('❌ Failed to initialize risk manager', { error: error.message });
@@ -296,12 +376,11 @@ class EnhancedTradingAgent {
     this.logger.info('📈 Initializing enhanced trading strategy...');
 
     try {
-      this.tradingStrategy = new TradingStrategy(
-        this.recallClient,
-        this.vincentClient,
-        this.gaiaClient,
-        this.logger
-      );
+      this.tradingStrategy = new TradingStrategy({
+        recallClient: this.recallClient,
+        vincentClient: this.vincentClient,
+        gaiaClient: this.gaiaClient
+      }, this.logger);
 
       // ============ Configure Strategy Parameters ============
       this.tradingStrategy.riskManager = this.riskManager;
@@ -362,8 +441,8 @@ class EnhancedTradingAgent {
       this.performanceMonitor.track('competition_start', Date.now());
 
       // ============ Start Trading Strategy ============
-      // Note: TradingStrategy start method will be implemented
       this.logger.info('Trading strategy starting...');
+      await this.tradingStrategy.start();
 
       // ============ Monitor Competition Progress ============
       await this._monitorCompetition();
@@ -379,36 +458,8 @@ class EnhancedTradingAgent {
      * @dev Tracks performance and handles graceful completion
      */
   async _monitorCompetition () {
-    this.logger.info('📈 Competition monitoring started');
-
-    const monitorInterval = setInterval(async () => {
-      try {
-        const timeRemaining = this.competitionEndTime - Date.now();
-        const progressPercent = ((COMPETITION_DURATION - timeRemaining) / COMPETITION_DURATION) * 100;
-
-        // ============ Log Progress ============
-        if (progressPercent % 10 < 1) { // Log every 10% progress
-          this.logger.info(`Competition progress: ${progressPercent.toFixed(1)}%`, {
-            timeRemaining: `${Math.round(timeRemaining / 1000 / 60)} minutes`,
-            totalTrades: this.metrics.totalTrades,
-            successfulTrades: this.metrics.successfulTrades,
-            totalProfit: this.metrics.totalProfit,
-            errors: this.metrics.errors
-          });
-        }
-
-        // ============ Check for Competition End ============
-        if (timeRemaining <= 0) {
-          clearInterval(monitorInterval);
-          await this._completeCompetition();
-        }
-
-        // ============ Check for Early Exit Conditions ============
-        await this._checkEarlyExitConditions(timeRemaining);
-      } catch (error) {
-        this.logger.error('Error in competition monitoring', { error: error.message });
-      }
-    }, 30000); // Check every 30 seconds
+    // Competition monitoring disabled - manual control only
+    this.logger.info('📈 Competition monitoring disabled - running until manually stopped');
   }
 
   /**
@@ -667,7 +718,7 @@ class EnhancedTradingAgent {
         await this.handleShutdown();
       }
     } catch (handlingError) {
-      console.error('Error in error handler:', handlingError);
+      this.logger.error('Error in error handler:', { error: handlingError.message });
     }
   }
 
@@ -772,14 +823,13 @@ async function main () {
     // ============ Start Competition ============
     await agent.start();
   } catch (error) {
-    console.error('💥 Fatal error in main execution:', error.message);
-    console.error(error.stack);
+    logger.error('💥 Fatal error in main execution:', { error: error.message, stack: error.stack });
 
     // ============ Attempt Graceful Shutdown ============
     try {
       await agent.handleShutdown();
     } catch (shutdownError) {
-      console.error('Error during emergency shutdown:', shutdownError.message);
+      logger.error('Error during emergency shutdown:', { error: shutdownError.message });
     }
 
     process.exit(1);
@@ -788,7 +838,7 @@ async function main () {
 
 // ============ Execute Main Function ============
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch(console.error);
+  main().catch(error => logger.error('Unhandled error in main:', { error: error.message }));
 }
 
 export { EnhancedTradingAgent };

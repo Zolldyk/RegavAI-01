@@ -304,9 +304,20 @@ Always respond in valid JSON format with specific execution parameters.`
       const cached = this._getFromCache(cacheKey);
 
       if (cached) {
-        this.logger.debug('📋 Returning cached market analysis');
+        this.logger.info('📋 GAIA AI - Using cached analysis', {
+          pairs: pairsArray,
+          cacheAge: `${Math.round((Date.now() - (cached.timestamp || 0)) / 1000)}s ago`
+        });
         return cached;
       }
+
+      this.logger.info('🤖 GAIA AI - Starting fresh market analysis', {
+        pairs: pairsArray,
+        model: this.model,
+        nodeUrl: this.nodeUrl.substring(0, 50) + '...',
+        marketData: Object.keys(marketData),
+        timestamp: new Date().toISOString()
+      });
 
       const currentTime = new Date().toISOString();
       const prompt = `Perform comprehensive cryptocurrency market analysis for high-frequency scalping trading.
@@ -383,10 +394,15 @@ RESPOND IN THIS EXACT JSON FORMAT:
       // ============ Cache with Shorter TTL for Market Data ============
       this._setCache(cacheKey, enhancedAnalysis, this.cacheTimeout);
 
-      this.logger.info('📊 Market analysis generated', {
-        pairs: tradingPairs.length,
+      this.logger.info('🧠 GAIA AI - Analysis completed successfully', {
+        pairs: pairsArray,
+        signalsGenerated: Object.keys(enhancedAnalysis.signals || {}).length,
+        sentiment: enhancedAnalysis.sentiment || 'neutral',
+        confidence: enhancedAnalysis.confidence || 'unknown',
         opportunities: enhancedAnalysis.scalpingOpportunities?.length || 0,
-        riskLevel: enhancedAnalysis.riskLevel
+        riskLevel: enhancedAnalysis.riskLevel,
+        keyInsights: enhancedAnalysis.summary?.substring(0, 80) + '...' || 'No summary available',
+        status: '✅ GAIA SUCCESS'
       });
 
       return enhancedAnalysis;
@@ -1029,8 +1045,8 @@ RESPOND IN THIS EXACT JSON FORMAT:
         } catch (error) {
           lastError = error;
 
-          if (attempt < 3 && error.message.includes('rate limit')) {
-            this.logger.warn(`🔄 Rate limit hit, retrying attempt ${attempt + 1}/3`);
+          if (attempt < 3 && (error.message.includes('rate limit') || error.message.includes('timeout') || error.message.includes('slow'))) {
+            this.logger.warn(`🔄 ${error.message.includes('rate limit') ? 'Rate limit' : 'Timeout'} hit, retrying attempt ${attempt + 1}/3`);
             await this._sleep(2000 * attempt); // Exponential backoff
             continue;
           }
@@ -1886,6 +1902,19 @@ RESPOND IN THIS EXACT JSON FORMAT:
      * @notice Get client health status
      * @returns {Object} Comprehensive health check
      */
+  /**
+   * @notice Get available models from the Gaia service
+   * @return {Array} List of available models
+   */
+  async getModels () {
+    try {
+      return [this.model, this.embeddingModel];
+    } catch (error) {
+      this.logger.error('Failed to get models', { error: error.message });
+      return [];
+    }
+  }
+
   async getHealthStatus () {
     const health = {
       status: 'unknown',
@@ -1957,3 +1986,5 @@ RESPOND IN THIS EXACT JSON FORMAT:
     }
   }
 }
+
+export default GaiaClient;

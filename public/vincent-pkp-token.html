@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vincent PKP Token ID Extraction</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .step { margin: 20px 0; padding: 15px; border-left: 4px solid #007cba; background: #f8f9fa; }
+        .token-display { background: #e8f4f8; padding: 15px; border-radius: 4px; margin: 10px 0; font-family: monospace; word-break: break-all; }
+        button { background: #007cba; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #005a8b; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
+        .url-list { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .url-list a { display: block; margin: 5px 0; color: #007cba; text-decoration: none; }
+        .url-list a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Vincent PKP Token ID Extraction</h1>
+        <p>This tool helps you get your legitimate PKP Token ID from Vincent for production use.</p>
+        
+        <div class="step">
+            <h3>Step 1: Access Vincent Consent Flow</h3>
+            <p>Try these Vincent consent URLs (open in new tab):</p>
+            <div class="url-list">
+                <a href="https://vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent Consent (Primary)</a>
+                <a href="https://app.vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent App Consent</a>
+                <a href="https://staging.vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent Staging Consent</a>
+            </div>
+            <p><strong>What happens:</strong> You'll be redirected to Vincent, connect your wallet, approve permissions, then return to your callback URL.</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Extract PKP Token ID</h3>
+            <p>After completing consent, extract your PKP Token ID:</p>
+            <button onclick="extractFromUrl()">🔍 Extract from URL</button>
+            <button onclick="extractFromStorage()">💾 Extract from Storage</button>
+            <button onclick="manualExtraction()">✏️ Manual Entry</button>
+            <div id="extractionResult"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Update Your .env File</h3>
+            <div id="envUpdate"></div>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Alternative Methods</h3>
+            <h4>📱 Mobile/Browser Console Method:</h4>
+            <ol>
+                <li>Complete Vincent consent flow</li>
+                <li>Open browser developer tools (F12)</li>
+                <li>In console, run: <code>localStorage.getItem('vincent_pkp_token_id')</code></li>
+                <li>Or run: <code>JSON.parse(localStorage.getItem('vincent_user_info')).pkpTokenId</code></li>
+            </ol>
+            
+            <h4>🔧 JWT Token Method:</h4>
+            <ol>
+                <li>Complete Vincent consent flow</li>
+                <li>Copy the JWT token from the callback URL</li>
+                <li>Use the manual extraction tool below</li>
+            </ol>
+            
+            <div class="token-display">
+                <label for="jwtInput">JWT Token (starts with eyJ...):</label><br>
+                <input type="text" id="jwtInput" placeholder="eyJ..." style="width: 100%; padding: 5px; margin: 5px 0;">
+                <button onclick="extractFromJWT()">🔓 Extract from JWT</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function extractFromUrl() {
+            const resultDiv = document.getElementById('extractionResult');
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            let found = false;
+            let html = '<h4>URL Parameters:</h4>';
+            
+            // Check for JWT in URL
+            if (urlParams.has('jwt')) {
+                const jwt = urlParams.get('jwt');
+                const tokenId = extractTokenIdFromJWT(jwt);
+                if (tokenId) {
+                    html += `<div class="success">✅ PKP Token ID found in URL: ${tokenId}</div>`;
+                    updateEnvDisplay(tokenId);
+                    found = true;
+                } else {
+                    html += '<div class="error">❌ JWT found in URL but no PKP Token ID</div>';
+                }
+            }
+            
+            // Check for authorization code
+            if (urlParams.has('code')) {
+                html += `<div class="warning">⚠️ Authorization code found: ${urlParams.get('code')}</div>`;
+                html += '<p>You need to exchange this code for a JWT token to get the PKP Token ID.</p>';
+            }
+            
+            // Show all parameters
+            urlParams.forEach((value, key) => {
+                html += `<div class="token-display"><strong>${key}:</strong> ${value}</div>`;
+            });
+            
+            if (!found && urlParams.size === 0) {
+                html += '<div class="error">❌ No URL parameters found. Complete Vincent consent flow first.</div>';
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        function extractFromStorage() {
+            const resultDiv = document.getElementById('extractionResult');
+            let html = '<h4>Browser Storage:</h4>';
+            let found = false;
+            
+            // Check localStorage
+            const storageKeys = [
+                'vincent_pkp_token_id',
+                'vincent_user_info',
+                'lit_auth_token',
+                'vincent_jwt',
+                'pkp_token_id'
+            ];
+            
+            for (const key of storageKeys) {
+                const value = localStorage.getItem(key);
+                if (value) {
+                    html += `<div class="token-display"><strong>${key}:</strong> ${value}</div>`;
+                    
+                    // Try to extract PKP token ID
+                    if (key === 'vincent_pkp_token_id' && value !== 'null') {
+                        html += `<div class="success">✅ PKP Token ID found: ${value}</div>`;
+                        updateEnvDisplay(value);
+                        found = true;
+                    } else if (key === 'vincent_user_info') {
+                        try {
+                            const userInfo = JSON.parse(value);
+                            if (userInfo.pkpTokenId) {
+                                html += `<div class="success">✅ PKP Token ID found: ${userInfo.pkpTokenId}</div>`;
+                                updateEnvDisplay(userInfo.pkpTokenId);
+                                found = true;
+                            }
+                        } catch (e) {
+                            html += '<div class="error">❌ Error parsing user info</div>';
+                        }
+                    }
+                }
+            }
+            
+            if (!found) {
+                html += '<div class="error">❌ No PKP Token ID found in storage. Complete Vincent consent flow first.</div>';
+            }
+            
+            resultDiv.innerHTML = html;
+        }
+        
+        function extractFromJWT() {
+            const jwtInput = document.getElementById('jwtInput').value.trim();
+            const resultDiv = document.getElementById('extractionResult');
+            
+            if (!jwtInput) {
+                resultDiv.innerHTML = '<div class="error">❌ Please enter a JWT token</div>';
+                return;
+            }
+            
+            const tokenId = extractTokenIdFromJWT(jwtInput);
+            if (tokenId) {
+                resultDiv.innerHTML = `<div class="success">✅ PKP Token ID extracted: ${tokenId}</div>`;
+                updateEnvDisplay(tokenId);
+            } else {
+                resultDiv.innerHTML = '<div class="error">❌ Could not extract PKP Token ID from JWT</div>';
+            }
+        }
+        
+        function extractTokenIdFromJWT(jwt) {
+            try {
+                const parts = jwt.split('.');
+                if (parts.length !== 3) return null;
+                
+                const payload = JSON.parse(atob(parts[1]));
+                return payload.pkp?.tokenId || null;
+            } catch (e) {
+                return null;
+            }
+        }
+        
+        function manualExtraction() {
+            const resultDiv = document.getElementById('extractionResult');
+            resultDiv.innerHTML = `
+                <h4>Manual PKP Token ID Entry:</h4>
+                <div class="token-display">
+                    <label for="manualTokenId">Enter your PKP Token ID:</label><br>
+                    <input type="text" id="manualTokenId" placeholder="Enter numeric token ID" style="width: 100%; padding: 5px; margin: 5px 0;">
+                    <button onclick="validateManualToken()">✅ Validate Token ID</button>
+                </div>
+                <p><em>PKP Token IDs are typically long numeric strings.</em></p>
+            `;
+        }
+        
+        function validateManualToken() {
+            const tokenId = document.getElementById('manualTokenId').value.trim();
+            const resultDiv = document.getElementById('extractionResult');
+            
+            if (!tokenId) {
+                resultDiv.innerHTML += '<div class="error">❌ Please enter a token ID</div>';
+                return;
+            }
+            
+            if (!/^\d+$/.test(tokenId)) {
+                resultDiv.innerHTML += '<div class="error">❌ PKP Token ID should be numeric</div>';
+                return;
+            }
+            
+            if (tokenId === '123456' || tokenId === '0') {
+                resultDiv.innerHTML += '<div class="error">❌ Please enter a real PKP Token ID, not a placeholder</div>';
+                return;
+            }
+            
+            resultDiv.innerHTML += `<div class="success">✅ PKP Token ID validated: ${tokenId}</div>`;
+            updateEnvDisplay(tokenId);
+        }
+        
+        function updateEnvDisplay(tokenId) {
+            const envDiv = document.getElementById('envUpdate');
+            envDiv.innerHTML = `
+                <div class="success">✅ Ready to update your .env file!</div>
+                <div class="token-display">
+                    <strong>Add this line to your .env file:</strong><br>
+                    <code>VINCENT_PKP_TOKEN_ID=${tokenId}</code>
+                </div>
+                <p><strong>Steps:</strong></p>
+                <ol>
+                    <li>Open your <code>.env</code> file in the regav-ai project</li>
+                    <li>Find the line: <code>VINCENT_PKP_TOKEN_ID=123456</code></li>
+                    <li>Replace it with: <code>VINCENT_PKP_TOKEN_ID=${tokenId}</code></li>
+                    <li>Save the file</li>
+                    <li>Restart your trading agent</li>
+                </ol>
+            `;
+        }
+        
+        // Auto-extract on page load
+        window.onload = function() {
+            extractFromUrl();
+        };
+    </script>
+</body>
+</html>
