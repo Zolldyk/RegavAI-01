@@ -87,33 +87,49 @@ export default async function handler (req, res) {
                   statusDiv.className = 'status ' + type;
                   statusDiv.style.display = 'block';
                 }
+                console.log('Status:', message);
               }
               
-              // First, add a simple test to verify the button works
-              consentButton.addEventListener('click', function testClick() {
-                console.log('Button clicked - test handler working');
-                showStatus('🔄 Button clicked, initializing Vincent...', 'loading');
+              // Test the Vincent SDK directly when button is clicked
+              consentButton.addEventListener('click', async function() {
+                console.log('Button clicked - starting Vincent authentication');
+                showStatus('🔄 Loading Vincent SDK...', 'loading');
                 
-                // Remove this test handler
-                consentButton.removeEventListener('click', testClick);
-                
-                // Now load Vincent and set up the real handler
-                loadVincentAndSetupButton();
-              });
-              
-              async function loadVincentAndSetupButton() {
                 try {
-                  showStatus('🔄 Loading Vincent SDK...', 'loading');
+                  // Test Vincent SDK import
+                  console.log('Importing Vincent SDK...');
+                  const vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
+                  console.log('Vincent SDK imported:', vincentModule);
                   
-                  // Import Vincent SDK
-                  const { getVincentWebAppClient, jwt } = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.1/dist/index.js');
-                  const { isExpired } = jwt;
+                  const { getVincentWebAppClient, jwt } = vincentModule;
+                  console.log('Vincent functions:', { getVincentWebAppClient, jwt });
                   
                   // Create Vincent client
+                  console.log('Creating Vincent client with appId:', appId);
                   const vincentAppClient = getVincentWebAppClient({ appId });
+                  console.log('Vincent client created:', vincentAppClient);
+                  
+                  // Test available methods
+                  console.log('Available methods:', Object.keys(vincentAppClient));
                   
                   // Check if we're returning from Vincent with a JWT
-                  if (vincentAppClient.isLoginUri()) {
+                  // Try both method names to see which one exists
+                  const hasIsLogin = typeof vincentAppClient.isLogin === 'function';
+                  const hasIsLoginUri = typeof vincentAppClient.isLoginUri === 'function';
+                  
+                  console.log('Method availability:', { hasIsLogin, hasIsLoginUri });
+                  
+                  let isReturningFromVincent = false;
+                  
+                  if (hasIsLoginUri) {
+                    isReturningFromVincent = vincentAppClient.isLoginUri();
+                    console.log('isLoginUri() result:', isReturningFromVincent);
+                  } else if (hasIsLogin) {
+                    isReturningFromVincent = vincentAppClient.isLogin();
+                    console.log('isLogin() result:', isReturningFromVincent);
+                  }
+                  
+                  if (isReturningFromVincent) {
                     showStatus('🔄 Processing Vincent consent...', 'loading');
                     
                     const { decodedJWT, jwtStr } = vincentAppClient.decodeVincentLoginJWT(window.location.origin);
@@ -141,24 +157,23 @@ export default async function handler (req, res) {
                       throw new Error('Failed to process JWT');
                     }
                   } else {
-                    // Check for stored JWT
-                    const storedJwt = localStorage.getItem('VINCENT_AUTH_JWT');
-                    const expired = storedJwt ? isExpired(storedJwt) : true;
+                    showStatus('🔄 Redirecting to Vincent...', 'loading');
                     
-                    if (!storedJwt || expired) {
-                      showStatus('🔄 Redirecting to Vincent...', 'loading');
-                      
-                      // Redirect to Vincent consent page
-                      vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
-                    } else {
-                      showStatus('✅ Already authenticated with Vincent', 'success');
-                    }
+                    // Test redirect function
+                    console.log('Calling redirectToConsentPage...');
+                    console.log('Redirect URI:', window.location.href);
+                    
+                    // Call redirect to Vincent consent page
+                    vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
+                    
+                    // If we get here, the redirect didn't work
+                    showStatus('❌ Redirect failed - page should have redirected to Vincent', 'error');
                   }
                 } catch (error) {
                   console.error('Error with Vincent:', error);
                   showStatus('❌ Error: ' + error.message, 'error');
                 }
-              }
+              });
               
               // Set initial status
               showStatus('✅ Ready to grant permissions. Click the button above.', 'success');
