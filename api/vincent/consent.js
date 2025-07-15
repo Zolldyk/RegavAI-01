@@ -96,42 +96,13 @@ export default async function handler (req, res) {
                 showStatus('🔄 Loading Vincent SDK...', 'loading');
                 
                 try {
-                  // Test Vincent SDK import - try multiple CDNs
+                  // Import Vincent SDK with cache busting
                   console.log('Importing Vincent SDK...');
-                  let vincentModule;
+                  const timestamp = new Date().getTime();
+                  const vincentUrl = \`https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`;
                   
-                  try {
-                    // Try jsdelivr first
-                    console.log('Trying jsdelivr CDN...');
-                    vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
-                  } catch (e1) {
-                    console.log('jsdelivr failed:', e1);
-                    try {
-                      // Try unpkg
-                      console.log('Trying unpkg CDN...');
-                      vincentModule = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
-                    } catch (e2) {
-                      console.log('unpkg failed:', e2);
-                      try {
-                        // Try ESM.sh
-                        console.log('Trying esm.sh CDN...');
-                        vincentModule = await import('https://esm.sh/@lit-protocol/vincent-app-sdk@1.0.2');
-                      } catch (e3) {
-                        console.log('esm.sh failed:', e3);
-                        try {
-                          // Try without version
-                          console.log('Trying latest version...');
-                          vincentModule = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/src/index.js');
-                        } catch (e4) {
-                          console.log('All CDNs failed:', e4);
-                          
-                          // All CDN methods failed - Vincent SDK unavailable
-                          console.log('Vincent SDK not available from any CDN');
-                          throw new Error('Vincent SDK could not be loaded from any CDN source');
-                        }
-                      }
-                    }
-                  }
+                  console.log('Loading Vincent SDK from:', vincentUrl);
+                  const vincentModule = await import(vincentUrl);
                   console.log('Vincent SDK imported:', vincentModule);
                   
                   const { getVincentWebAppClient, jwt } = vincentModule;
