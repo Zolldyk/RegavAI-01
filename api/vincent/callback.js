@@ -129,7 +129,8 @@ export default async function handler (req, res) {
                   
                   try {
                     // Import Vincent Web App Client
-                    const { getVincentWebAppClient } = await import('https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@latest/dist/index.js');
+                    const timestamp = new Date().getTime();
+                    const { getVincentWebAppClient } = await import(\`https://cdn.jsdelivr.net/npm/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`);
                     
                     const vincentAppClient = getVincentWebAppClient({ appId: '${process.env.VINCENT_APP_ID || '983'}' });
                     
