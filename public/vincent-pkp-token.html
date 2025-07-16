@@ -28,10 +28,12 @@
         <div class="step">
             <h3>Step 1: Access Vincent Consent Flow</h3>
             <p>Try these Vincent consent URLs (open in new tab):</p>
+            <button onclick="startVincentConsent()" style="background: #007cba; color: white; padding: 15px 30px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 10px 0;">🚀 Start Vincent Consent Flow</button>
+            
             <div class="url-list">
-                <a href="https://vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent Consent (Primary)</a>
-                <a href="https://app.vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent App Consent</a>
-                <a href="https://staging.vincent.domains/consent?appId=983&redirectUrl=https://regav-trading-agent-an0zem3cv-zoldycks-projects-8a6a6155.vercel.app/vincent/callback" target="_blank">🔗 Vincent Staging Consent</a>
+                <a href="https://dashboard.heyvincent.ai/983/consent?redirectUri=https://regav-ai-zoldycks-projects-8a6a6155.vercel.app/api/vincent/callback" target="_blank">🔗 Vincent Dashboard Consent</a>
+                <a href="https://vincent.domains/consent?appId=983&redirectUrl=https://regav-ai-zoldycks-projects-8a6a6155.vercel.app/api/vincent/callback" target="_blank">🔗 Vincent Consent (Primary)</a>
+                <a href="https://app.vincent.domains/consent?appId=983&redirectUrl=https://regav-ai-zoldycks-projects-8a6a6155.vercel.app/api/vincent/callback" target="_blank">🔗 Vincent App Consent</a>
             </div>
             <p><strong>What happens:</strong> You'll be redirected to Vincent, connect your wallet, approve permissions, then return to your callback URL.</p>
         </div>
@@ -243,6 +245,45 @@
                     <li>Restart your trading agent</li>
                 </ol>
             `;
+        }
+        
+        function startVincentConsent() {
+            console.log('Starting Vincent consent flow...');
+            
+            // Show status
+            const resultDiv = document.getElementById('extractionResult');
+            resultDiv.innerHTML = '<div class="warning">🔄 Opening Vincent consent page...</div>';
+            
+            // Try Vincent SDK approach first
+            const tryVincentSDK = async () => {
+                try {
+                    const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
+                    const vincentAppClient = getVincentWebAppClient({ appId: '983' });
+                    
+                    // Try to redirect with SDK
+                    if (vincentAppClient.redirectToLoginPage) {
+                        vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
+                        return true;
+                    } else if (vincentAppClient.redirectToConsentPage) {
+                        vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
+                        return true;
+                    }
+                } catch (error) {
+                    console.log('Vincent SDK failed:', error);
+                    return false;
+                }
+                return false;
+            };
+            
+            // Try SDK first, then fallback to direct URL
+            tryVincentSDK().then(success => {
+                if (!success) {
+                    // Fallback to direct URL
+                    const vincentUrl = 'https://dashboard.heyvincent.ai/983/consent?redirectUri=' + encodeURIComponent(window.location.href);
+                    window.open(vincentUrl, '_blank');
+                    resultDiv.innerHTML = '<div class="success">✅ Vincent consent page opened in new tab. Complete the process there.</div>';
+                }
+            });
         }
         
         // Auto-extract on page load
