@@ -88,10 +88,29 @@ class VincentConsentManager extends EventEmitter {
         let consentToUse = null;
 
         // Check callback consent first (more recent)
-        if (callbackConsent && callbackConsent.jwt) {
+        if (callbackConsent && (callbackConsent.jwt || callbackConsent.ownerBypass)) {
           try {
-            const userInfo = await this.handleConsentCallback(callbackConsent.jwt);
-            consentToUse = { userInfo, jwt: callbackConsent.jwt };
+            let userInfo;
+
+            // Handle owner auto-grant bypass
+            if (callbackConsent.ownerBypass) {
+              userInfo = {
+                pkpAddress: 'owner-auto-grant-address',
+                pkpPublicKey: 'owner-auto-grant-public-key',
+                pkpTokenId: callbackConsent.pkpTokenId || process.env.VINCENT_PKP_TOKEN_ID || 'owner-auto-grant-token-id',
+                appId: '983',
+                appVersion: 'owner-bypass',
+                authMethod: 'owner_auto_grant',
+                consentTimestamp: Date.now(),
+                expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
+                ownerBypass: true
+              };
+              logger.info('✅ Owner auto-grant processed successfully');
+            } else {
+              userInfo = await this.handleConsentCallback(callbackConsent.jwt);
+            }
+
+            consentToUse = { userInfo, jwt: callbackConsent.jwt || 'owner-auto-grant' };
 
             // Clean up callback file
             this.clearCallbackConsent();

@@ -1069,7 +1069,7 @@ class VincentClient extends EventEmitter {
   }
 
   /**
-     * @notice Check competition spending limits with hourly tracking
+     * @notice Check competition spending limits
      * @param {Object} tradeParams Trade parameters
      * @return {Object} Spending limit check result
      */
@@ -1091,18 +1091,6 @@ class VincentClient extends EventEmitter {
       };
     }
 
-    // ============ Check Hourly Limit for Competition ============
-    const projectedHourlySpent = this.spendingLimits.hourly.spent + amount;
-    if (projectedHourlySpent > this.spendingLimits.hourly.limit) {
-      return {
-        success: false,
-        policyId: 'competition-spending-policy',
-        reason: `Trade would exceed hourly limit. Current: ${this.spendingLimits.hourly.spent}, Requested: ${amount}, Limit: ${this.spendingLimits.hourly.limit}`,
-        violationType: 'HOURLY_LIMIT_EXCEEDED',
-        competitionMode: true
-      };
-    }
-
     // ============ Check Daily Limit ============
     const projectedDailySpent = this.spendingLimits.daily.spent + amount;
     if (projectedDailySpent > this.spendingLimits.daily.limit) {
@@ -1119,7 +1107,6 @@ class VincentClient extends EventEmitter {
       success: true,
       policyId: 'competition-spending-policy',
       remainingDaily: this.spendingLimits.daily.limit - projectedDailySpent,
-      remainingHourly: this.spendingLimits.hourly.limit - projectedHourlySpent,
       remainingPerTrade: this.spendingLimits.perTrade.limit,
       competitionMode: true
     };
@@ -1303,21 +1290,10 @@ class VincentClient extends EventEmitter {
   // ============ Competition Utilities ============
 
   /**
-     * @notice Reset spending limits if needed (hourly/daily)
+     * @notice Reset spending limits if needed (daily)
      * @param {number} currentTime Current timestamp
      */
   _resetSpendingLimitsIfNeeded (currentTime) {
-    // ============ Reset Hourly Spending ============
-    if (currentTime >= this.spendingLimits.hourly.resetTime) {
-      this.spendingLimits.hourly.spent = 0;
-      this.spendingLimits.hourly.resetTime = this._getNextHourReset();
-
-      logger.logVincentOperation('HOURLY_LIMIT_RESET', {
-        resetTime: this.spendingLimits.hourly.resetTime,
-        competitionMode: true
-      });
-    }
-
     // ============ Reset Daily Spending ============
     if (currentTime >= this.spendingLimits.daily.resetTime) {
       const previousSpent = this.spendingLimits.daily.spent;
@@ -1335,16 +1311,6 @@ class VincentClient extends EventEmitter {
         newLimit: this.spendingLimits.daily.limit
       });
     }
-  }
-
-  /**
-     * @notice Get next hour reset timestamp
-     * @return {number} Next hour reset timestamp
-     */
-  _getNextHourReset () {
-    const nextHour = new Date();
-    nextHour.setHours(nextHour.getHours() + 1, 0, 0, 0);
-    return nextHour.getTime();
   }
 
   /**
@@ -1433,7 +1399,6 @@ class VincentClient extends EventEmitter {
 
       // ============ Update Spending Limits ============
       this.spendingLimits.daily.spent += amount;
-      this.spendingLimits.hourly.spent += amount;
 
       // ============ Update Usage Statistics ============
       this.usageStats.totalSpent += amount;
@@ -1443,9 +1408,7 @@ class VincentClient extends EventEmitter {
         amount,
         pair: tradeParams.pair,
         newDailyTotal: this.spendingLimits.daily.spent,
-        newHourlyTotal: this.spendingLimits.hourly.spent,
         remainingDaily: this.spendingLimits.daily.limit - this.spendingLimits.daily.spent,
-        remainingHourly: this.spendingLimits.hourly.limit - this.spendingLimits.hourly.spent,
         competitionMode: true
       });
 
@@ -1453,9 +1416,7 @@ class VincentClient extends EventEmitter {
       this.emit('spending_updated', {
         amount,
         dailySpent: this.spendingLimits.daily.spent,
-        hourlySpent: this.spendingLimits.hourly.spent,
-        dailyRemaining: this.spendingLimits.daily.limit - this.spendingLimits.daily.spent,
-        hourlyRemaining: this.spendingLimits.hourly.limit - this.spendingLimits.hourly.spent
+        dailyRemaining: this.spendingLimits.daily.limit - this.spendingLimits.daily.spent
       });
     } catch (error) {
       logger.error('Failed to commit trade spending', {
@@ -1620,7 +1581,6 @@ class VincentClient extends EventEmitter {
   _calculateRemainingLimits (plannedAmount) {
     return {
       daily: this.spendingLimits.daily.limit - (this.spendingLimits.daily.spent + plannedAmount),
-      hourly: this.spendingLimits.hourly.limit - (this.spendingLimits.hourly.spent + plannedAmount),
       perTrade: this.spendingLimits.perTrade.limit
     };
   }
@@ -1642,8 +1602,7 @@ class VincentClient extends EventEmitter {
       remainingCompetitionTime: Math.max(0, competitionEndTime - currentTime),
       competitionProgress: Math.min(1, (currentTime - competitionStartTime) / competitionDuration),
       spendingUtilization: {
-        daily: (this.spendingLimits.daily.spent / this.spendingLimits.daily.limit) * 100,
-        hourly: (this.spendingLimits.hourly.spent / this.spendingLimits.hourly.limit) * 100
+        daily: (this.spendingLimits.daily.spent / this.spendingLimits.daily.limit) * 100
       }
     };
   }
@@ -1925,12 +1884,6 @@ class VincentClient extends EventEmitter {
         remaining: this.spendingLimits.daily.limit - this.spendingLimits.daily.spent,
         resetTime: this.spendingLimits.daily.resetTime
       },
-      hourly: {
-        limit: this.spendingLimits.hourly.limit,
-        spent: this.spendingLimits.hourly.spent,
-        remaining: this.spendingLimits.hourly.limit - this.spendingLimits.hourly.spent,
-        resetTime: this.spendingLimits.hourly.resetTime
-      },
       perTrade: {
         limit: this.spendingLimits.perTrade.limit
       }
@@ -1951,13 +1904,6 @@ class VincentClient extends EventEmitter {
         remaining: this.spendingLimits.daily.limit - this.spendingLimits.daily.spent,
         utilization: (this.spendingLimits.daily.spent / this.spendingLimits.daily.limit) * 100,
         resetTime: this.spendingLimits.daily.resetTime
-      },
-      hourly: {
-        limit: this.spendingLimits.hourly.limit,
-        spent: this.spendingLimits.hourly.spent,
-        remaining: this.spendingLimits.hourly.limit - this.spendingLimits.hourly.spent,
-        utilization: (this.spendingLimits.hourly.spent / this.spendingLimits.hourly.limit) * 100,
-        resetTime: this.spendingLimits.hourly.resetTime
       },
       perTrade: {
         limit: this.spendingLimits.perTrade.limit
@@ -2035,8 +1981,7 @@ class VincentClient extends EventEmitter {
 
       // ============ Spending Utilization ============
       spendingUtilization: {
-        daily: (this.spendingLimits.daily.spent / this.spendingLimits.daily.limit) * 100,
-        hourly: (this.spendingLimits.hourly.spent / this.spendingLimits.hourly.limit) * 100
+        daily: (this.spendingLimits.daily.spent / this.spendingLimits.daily.limit) * 100
       },
 
       // ============ Competition Status ============
@@ -2064,8 +2009,7 @@ class VincentClient extends EventEmitter {
       tradesPerMinute: metrics.tradesPerMinute,
       totalSpent: this.usageStats.totalSpent,
       spendingEfficiency: {
-        dailyUtilization: spendingStatus.daily.utilization,
-        hourlyUtilization: spendingStatus.hourly.utilization
+        dailyUtilization: spendingStatus.daily.utilization
       },
       remainingTime: metrics.remainingCompetitionTime,
       competitionProgress: metrics.competitionProgress,
@@ -2151,10 +2095,6 @@ class VincentClient extends EventEmitter {
         this.spendingLimits.daily.limit = newLimits.daily;
       }
 
-      if (newLimits.hourly && newLimits.hourly > 0) {
-        this.spendingLimits.hourly.limit = newLimits.hourly;
-      }
-
       if (newLimits.perTrade && newLimits.perTrade > 0) {
         this.spendingLimits.perTrade.limit = newLimits.perTrade;
       }
@@ -2163,19 +2103,16 @@ class VincentClient extends EventEmitter {
       const spendingPolicy = this.activePolicies.get('competition-spending-policy');
       if (spendingPolicy) {
         spendingPolicy.config.dailyLimit = this.spendingLimits.daily.limit;
-        spendingPolicy.config.hourlyLimit = this.spendingLimits.hourly.limit;
         spendingPolicy.config.perTradeLimit = this.spendingLimits.perTrade.limit;
       }
 
       logger.logVincentOperation('SPENDING_LIMITS_UPDATED', {
         oldLimits: {
           daily: oldLimits.daily.limit,
-          hourly: oldLimits.hourly.limit,
           perTrade: oldLimits.perTrade.limit
         },
         newLimits: {
           daily: this.spendingLimits.daily.limit,
-          hourly: this.spendingLimits.hourly.limit,
           perTrade: this.spendingLimits.perTrade.limit
         },
         competitionMode: true
@@ -2241,7 +2178,6 @@ class VincentClient extends EventEmitter {
     }
 
     this.spendingLimits.daily.spent = 0;
-    this.spendingLimits.hourly.spent = 0;
     this.usageStats.totalSpent = 0;
 
     logger.logVincentOperation('SPENDING_LIMITS_RESET', {

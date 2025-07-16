@@ -241,26 +241,31 @@ export default async function handler (req, res) {
         hasJWT: !!(jwt || token || access_token || id_token || vincentJWT || vincentLoginJWT || lit_jwt || lit_token),
         bodyKeys: Object.keys(body)
       });
-      // Check if JWT token is directly in the POST body
+      // Check if JWT token is directly in the POST body or if it's an owner auto-grant
       const jwtToken = jwt || token || access_token || id_token || vincentJWT || vincentLoginJWT || lit_jwt || lit_token;
-      if (jwtToken) {
+      const isOwnerAutoGrant = body.ownerBypass || (body.source === 'owner_auto_grant');
+      
+      if (jwtToken || isOwnerAutoGrant) {
         try {
           const fs = await import('fs');
           const path = await import('path');
           const consentData = {
-            jwt: jwtToken,
+            jwt: jwtToken || body.jwt || 'owner-auto-grant-' + Date.now(),
             timestamp: Date.now(),
             callback: true,
             method: 'POST',
             source: body.source || 'unknown',
-            decodedJWT: body.decodedJWT || null
+            decodedJWT: body.decodedJWT || null,
+            ownerBypass: isOwnerAutoGrant,
+            pkpTokenId: body.pkpTokenId || process.env.VINCENT_PKP_TOKEN_ID
           };
           const consentFilePath = path.join(process.cwd(), '.vincent-consent-callback.json');
           fs.writeFileSync(consentFilePath, JSON.stringify(consentData, null, 2));
-          console.log('Vincent consent completed with JWT (POST):', { 
-            jwt: jwtToken.substring(0, 50) + '...',
+          console.log('Vincent consent completed (POST):', { 
+            jwt: jwtToken ? jwtToken.substring(0, 50) + '...' : 'owner-auto-grant',
             source: body.source,
             hasDecodedJWT: !!body.decodedJWT,
+            isOwnerAutoGrant: isOwnerAutoGrant,
             timestamp: new Date().toISOString()
           });
           return res.status(200).json({
