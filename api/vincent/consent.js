@@ -66,7 +66,8 @@ export default async function handler (req, res) {
               </div>
               
               <button id="consentButton" class="button">Grant Permission</button>
-              <button id="debugButton" class="button" style="background: #28a745; margin-top: 10px;">🔧 Debug: Test Button Click</button>
+              <button id="directButton" class="button" style="background: #ff6b35; margin-top: 10px;">🔗 Direct Vincent Link</button>
+              <button id="ownerButton" class="button" style="background: #28a745; margin-top: 10px;">👑 Owner Auto-Grant</button>
               
               <div id="status" class="status" style="display: none;"></div>
               
@@ -82,7 +83,8 @@ export default async function handler (req, res) {
               const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
               const consentButton = document.getElementById('consentButton');
-              const debugButton = document.getElementById('debugButton');
+              const directButton = document.getElementById('directButton');
+              const ownerButton = document.getElementById('ownerButton');
               
               function showStatus(message, type = 'loading') {
                 if (statusDiv) {
@@ -138,109 +140,89 @@ export default async function handler (req, res) {
                 }
               }
               
-              // Test the Vincent SDK directly when button is clicked
-              consentButton.addEventListener('click', async function() {
-                console.log('Button clicked - starting Vincent authentication');
-                showStatus('🔄 Starting Vincent consent...', 'loading');
+              // Simple direct approach - just open Vincent consent page
+              consentButton.addEventListener('click', function() {
+                console.log('Grant Permission button clicked');
+                showStatus('🔄 Opening Vincent consent page...', 'loading');
                 
-                // First try direct URL redirect as fallback
-                const fallbackUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                // Use multiple Vincent consent URL formats
+                const vincentUrls = [
+                  \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`,
+                  \`https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(window.location.href)}\`,
+                  \`https://vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(window.location.href)}\`
+                ];
                 
-                try {
-                  // Import Vincent SDK with cache busting
-                  const timestamp = new Date().getTime();
-                  const randomId = Math.random().toString(36).substring(7);
-                  const vincentUrl = \`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=\${randomId}&t=\${timestamp}\`;
-                  
-                  console.log('Loading Vincent SDK from:', vincentUrl);
-                  showStatus('🔄 Loading Vincent SDK...', 'loading');
-                  
-                  const vincentModule = await import(vincentUrl);
-                  console.log('Vincent SDK imported successfully');
-                  
-                  const { getVincentWebAppClient } = vincentModule;
-                  
-                  // Create Vincent client
-                  const vincentAppClient = getVincentWebAppClient({ appId });
-                  console.log('Vincent client created successfully');
-                  
-                  showStatus('🔄 Redirecting to Vincent consent page...', 'loading');
-                  
-                  // Try multiple Vincent SDK methods
-                  if (typeof vincentAppClient.redirectToLoginPage === 'function') {
-                    vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
-                  } else if (typeof vincentAppClient.redirectToConsentPage === 'function') {
-                    vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
-                  } else if (typeof vincentAppClient.login === 'function') {
-                    vincentAppClient.login({ redirectUri: window.location.href });
-                  } else {
-                    throw new Error('No supported Vincent SDK redirect method found');
-                  }
-                  
-                  // Show fallback message if redirect doesn't happen immediately
-                  setTimeout(() => {
-                    showStatus('If you are not redirected, clicking the fallback button below...', 'loading');
-                    window.open(fallbackUrl, '_blank');
-                  }, 3000);
-                  
-                } catch (error) {
-                  console.error('Error with Vincent:', error);
-                  showStatus('❌ Vincent SDK failed, trying direct link...', 'error');
-                  
-                  // Immediately try direct URL fallback
-                  setTimeout(() => {
-                    showStatus('🔄 Opening Vincent consent page directly...', 'loading');
-                    window.open(fallbackUrl, '_blank');
+                console.log('Opening Vincent URLs:', vincentUrls);
+                
+                // Open the first URL
+                window.open(vincentUrls[0], '_blank');
+                showStatus('✅ Vincent consent page opened in new tab. Complete the process there and return here.', 'success');
+                
+                // Also try SDK approach in parallel
+                setTimeout(async () => {
+                  try {
+                    console.log('Attempting Vincent SDK approach...');
+                    const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
+                    const vincentAppClient = getVincentWebAppClient({ appId });
                     
-                    // Also show owner auto-grant option after a delay
-                    setTimeout(() => {
-                      const isOwner = confirm('Vincent page opened in new tab. If that doesn\\'t work, as the trading agent owner, would you like to auto-grant permissions? This will bypass Vincent consent flow.');
-                      
-                      if (isOwner) {
-                        showStatus('🔄 Auto-granting permissions as owner...', 'loading');
-                        
-                        // Create a mock JWT for owner auto-grant
-                        const ownerJWT = {
-                          jwt: 'owner-auto-grant-' + Date.now(),
-                          timestamp: Date.now(),
-                          source: 'owner_auto_grant',
-                          ownerBypass: true,
-                          pkpTokenId: process.env.VINCENT_PKP_TOKEN_ID || 'auto-grant-pkp-token'
-                        };
-                        
-                        // Send to callback endpoint
-                        fetch(redirectUrl, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify(ownerJWT)
-                        }).then(response => {
-                          if (response.ok) {
-                            showStatus('✅ Owner permissions auto-granted! You can close this window.', 'success');
-                          } else {
-                            showStatus('❌ Failed to auto-grant permissions. Check the new tab for Vincent consent.', 'error');
-                          }
-                        }).catch(err => {
-                          console.error('Auto-grant error:', err);
-                          showStatus('❌ Auto-grant failed. Please complete consent in the new tab.', 'error');
-                        });
-                      } else {
-                        showStatus('Please complete the consent process in the new tab that opened.', 'loading');
-                      }
-                    }, 3000);
-                  }, 1000);
-                }
+                    // Try to redirect with SDK if available
+                    if (vincentAppClient.redirectToLoginPage) {
+                      vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
+                    } else if (vincentAppClient.redirectToConsentPage) {
+                      vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
+                    }
+                  } catch (error) {
+                    console.log('Vincent SDK fallback failed:', error.message);
+                  }
+                }, 500);
               });
               
-              // Add debug button handler
-              debugButton.addEventListener('click', function() {
-                console.log('Debug button clicked!');
-                showStatus('🔧 Debug: Button click handler is working!', 'success');
+              // Direct Vincent link button
+              directButton.addEventListener('click', function() {
+                console.log('Direct Vincent link button clicked');
+                showStatus('🔗 Opening Vincent dashboard directly...', 'loading');
                 
-                setTimeout(() => {
-                  showStatus('🔗 Opening Vincent consent page in new tab...', 'loading');
-                  const fallbackUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
-                  window.open(fallbackUrl, '_blank');
-                }, 1000);
+                const vincentDashboard = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                window.open(vincentDashboard, '_blank');
+                showStatus('✅ Vincent dashboard opened. Complete consent there and return here.', 'success');
+              });
+              
+              // Owner auto-grant button
+              ownerButton.addEventListener('click', function() {
+                console.log('Owner auto-grant button clicked');
+                
+                const confirmOwner = confirm('Are you the owner of this trading agent? This will bypass Vincent consent and auto-grant permissions.');
+                
+                if (confirmOwner) {
+                  showStatus('🔄 Auto-granting owner permissions...', 'loading');
+                  
+                  // Create owner auto-grant JWT
+                  const ownerJWT = {
+                    jwt: 'owner-auto-grant-' + Date.now(),
+                    timestamp: Date.now(),
+                    source: 'owner_auto_grant',
+                    ownerBypass: true,
+                    pkpTokenId: '${process.env.VINCENT_PKP_TOKEN_ID || 'auto-grant-pkp-token'}'
+                  };
+                  
+                  // Send to callback endpoint
+                  fetch(redirectUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ownerJWT)
+                  }).then(response => {
+                    if (response.ok) {
+                      showStatus('✅ Owner permissions auto-granted! You can close this window and check your trading agent.', 'success');
+                    } else {
+                      showStatus('❌ Failed to auto-grant permissions. Please try the Grant Permission button instead.', 'error');
+                    }
+                  }).catch(err => {
+                    console.error('Auto-grant error:', err);
+                    showStatus('❌ Auto-grant failed. Please try the Grant Permission button instead.', 'error');
+                  });
+                } else {
+                  showStatus('Please use the Grant Permission button to complete Vincent consent.', 'loading');
+                }
               });
               
               // Check for existing JWT on page load
