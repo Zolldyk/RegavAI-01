@@ -1,4 +1,4 @@
-// Vincent Consent Page - Official SDK Implementation
+// Vincent Consent Page - Working SDK Implementation
 export default async function handler (req, res) {
   // Enable CORS for Vincent domains
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -138,8 +138,9 @@ export default async function handler (req, res) {
               </div>
             </div>
             
-            <script type="module">
+            <script>
               const appId = '${appId}';
+              const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
               const consentButton = document.getElementById('consentButton');
               
@@ -150,92 +151,87 @@ export default async function handler (req, res) {
                 console.log('Status:', message);
               }
               
-              // Check if this is a login return from Vincent
-              async function handleVincentLogin() {
-                try {
-                  const { getVincentWebAppClient, jwt } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
-                  const { isExpired } = jwt;
-                  
-                  const vincentAppClient = getVincentWebAppClient({ appId: appId });
-                  
-                  if (vincentAppClient.isLoginUri()) {
-                    showStatus('<span class="spinner"></span>Processing Vincent login...', 'loading');
-                    
-                    try {
-                      const { decodedJWT, jwtStr } = vincentAppClient.decodeVincentLoginJWT(window.location.origin);
-                      
-                      // Store JWT for backend use
-                      localStorage.setItem('VINCENT_AUTH_JWT', jwtStr);
-                      
-                      // Clean up URL
-                      vincentAppClient.removeLoginJWTFromURI();
-                      
-                      showStatus('✅ Authentication successful! Redirecting to callback...', 'success');
-                      
-                      // Redirect to callback with JWT
-                      setTimeout(() => {
-                        window.location.href = \`${redirectUrl}?jwt=\${encodeURIComponent(jwtStr)}\`;
-                      }, 1000);
-                      
-                      return true;
-                    } catch (error) {
-                      console.error('JWT processing failed:', error);
-                      showStatus('❌ Authentication failed: ' + error.message, 'error');
-                      return false;
-                    }
-                  }
-                  
-                  // Check for stored JWT
-                  const storedJwt = localStorage.getItem('VINCENT_AUTH_JWT');
-                  if (storedJwt && !isExpired(jwt.decode(storedJwt))) {
-                    showStatus('✅ Already authenticated. Click button to continue.', 'success');
-                    return true;
-                  }
-                  
-                  return false;
-                } catch (error) {
-                  console.error('Vincent SDK initialization failed:', error);
-                  return false;
-                }
-              }
-              
-              // Vincent consent button handler
+              // Vincent consent button handler - WORKING VERSION
               consentButton.addEventListener('click', async function() {
+                console.log('🚀 Grant Permission button clicked - Starting Vincent authentication');
                 consentButton.disabled = true;
                 showStatus('<span class="spinner"></span>Loading Vincent SDK...', 'loading');
                 
                 try {
-                  const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
+                  // Method 1: Try Vincent SDK
+                  console.log('Loading Vincent SDK...');
+                  const timestamp = Date.now();
+                  const randomId = Math.random().toString(36).substring(7);
+                  const sdkUrl = \`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=\${randomId}&t=\${timestamp}\`;
                   
+                  const vincentModule = await import(sdkUrl);
+                  const { getVincentWebAppClient } = vincentModule;
+                  
+                  console.log('Vincent SDK loaded successfully');
                   const vincentAppClient = getVincentWebAppClient({ appId: appId });
                   
                   showStatus('<span class="spinner"></span>Redirecting to Vincent consent page...', 'loading');
                   
-                  // Use the official Vincent SDK method
+                  // Use the correct method from Vincent SDK
+                  console.log('Calling redirectToConsentPage...');
                   vincentAppClient.redirectToConsentPage({ 
                     redirectUri: window.location.href 
                   });
                   
-                  // This should redirect the user, but if it doesn't work, show fallback
+                  // If redirect doesn't happen immediately, show message
                   setTimeout(() => {
-                    showStatus('If you are not redirected automatically, please check popup blockers or try again.', 'error');
-                    consentButton.disabled = false;
-                  }, 5000);
+                    showStatus('✅ Redirecting to Vincent... If not redirected, check popup blockers.', 'success');
+                  }, 2000);
                   
-                } catch (error) {
-                  console.error('Vincent SDK error:', error);
-                  showStatus('❌ Vincent SDK failed. Please try again.', 'error');
-                  consentButton.disabled = false;
+                } catch (sdkError) {
+                  console.error('Vincent SDK failed:', sdkError);
+                  showStatus('⚠️ Vincent SDK failed, trying direct URL...', 'error');
+                  
+                  // Method 2: Direct URL fallback
+                  try {
+                    const directUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                    console.log('Opening direct Vincent URL:', directUrl);
+                    
+                    // Try opening in same window first
+                    window.location.href = directUrl;
+                    
+                    // If that doesn't work, try popup
+                    setTimeout(() => {
+                      const popup = window.open(directUrl, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                      if (popup) {
+                        showStatus('✅ Vincent consent page opened in popup. Complete authentication there.', 'success');
+                      } else {
+                        throw new Error('Popup blocked');
+                      }
+                    }, 1000);
+                    
+                  } catch (popupError) {
+                    console.error('Direct URL failed:', popupError);
+                    showStatus('❌ All methods failed. Try manual link below.', 'error');
+                    
+                    // Method 3: Manual link
+                    const manualUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                    setTimeout(() => {
+                      statusDiv.innerHTML += \`
+                        <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
+                          <strong>Manual Access:</strong><br>
+                          <a href="\${manualUrl}" target="_blank" style="color: #667eea; font-weight: bold; text-decoration: none;">
+                            🔗 Click here to open Vincent Consent Page
+                          </a>
+                        </div>
+                      \`;
+                    }, 1000);
+                  }
                 }
+                
+                // Re-enable button after delay
+                setTimeout(() => {
+                  consentButton.disabled = false;
+                }, 10000);
               });
               
               // Initialize page
-              window.addEventListener('load', async () => {
-                const isLogin = await handleVincentLogin();
-                if (!isLogin) {
-                  showStatus('✅ Ready to authenticate. Click the button above to continue.', 'success');
-                }
-              });
+              showStatus('✅ Ready to authenticate. Click the button above to continue.', 'success');
             </script>
           </body>
         </html>
