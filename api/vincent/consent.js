@@ -188,6 +188,7 @@ export default async function handler (req, res) {
             </div>
             
             <script>
+              // Production Vincent Consent - Updated ${new Date().toISOString()}
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
