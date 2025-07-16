@@ -209,38 +209,71 @@ export default async function handler (req, res) {
                 showStatus('<span class="spinner"></span>Starting Vincent consent...', 'loading');
                 
                 try {
-                  // Direct approach: open Vincent consent URLs
-                  const vincentUrls = [
-                    \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`,
-                    \`https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`,
-                    \`https://vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`
-                  ];
-                  
-                  console.log('Opening Vincent consent URLs:', vincentUrls);
-                  
-                  // Open primary Vincent URL
-                  const consentWindow = window.open(vincentUrls[0], '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
-                  
-                  if (consentWindow) {
-                    showStatus('✅ Vincent consent page opened. Complete authentication there and return here.', 'success');
+                  // Primary approach: Vincent SDK for official authentication flow
+                  try {
+                    console.log('Loading Vincent SDK...');
+                    showStatus('<span class="spinner"></span>Connecting to Vincent...', 'loading');
                     
-                    // Try Vincent SDK as secondary approach
-                    setTimeout(async () => {
-                      try {
-                        const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
-                        const vincentAppClient = getVincentWebAppClient({ appId });
-                        
-                        if (vincentAppClient.redirectToLoginPage) {
-                          console.log('Vincent SDK available, attempting redirect...');
-                          vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
-                        }
-                      } catch (error) {
-                        console.log('Vincent SDK secondary attempt failed:', error);
-                      }
-                    }, 1000);
+                    // Load Vincent SDK
+                    const timestamp = Date.now();
+                    const { getVincentWebAppClient } = await import(\`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`);
                     
-                  } else {
-                    throw new Error('Popup blocked');
+                    // Create Vincent client
+                    const vincentAppClient = getVincentWebAppClient({ 
+                      appId: appId,
+                      environment: 'datil-dev' // or 'prod' if you want production
+                    });
+                    
+                    console.log('Vincent SDK loaded successfully');
+                    showStatus('<span class="spinner"></span>Opening Vincent authentication...', 'loading');
+                    
+                    // Try Vincent SDK redirect methods
+                    let redirected = false;
+                    
+                    if (vincentAppClient.redirectToLoginPage) {
+                      console.log('Using Vincent redirectToLoginPage');
+                      vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
+                      redirected = true;
+                    } else if (vincentAppClient.redirectToConsentPage) {
+                      console.log('Using Vincent redirectToConsentPage');
+                      vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
+                      redirected = true;
+                    } else if (vincentAppClient.login) {
+                      console.log('Using Vincent login');
+                      vincentAppClient.login({ redirectUri: window.location.href });
+                      redirected = true;
+                    }
+                    
+                    if (redirected) {
+                      showStatus('✅ Redirecting to Vincent authentication...', 'success');
+                      // Give it a moment to redirect
+                      setTimeout(() => {
+                        showStatus('If you are not redirected, please check if popups are blocked.', 'loading');
+                      }, 3000);
+                    } else {
+                      throw new Error('No Vincent SDK redirect method available');
+                    }
+                    
+                  } catch (sdkError) {
+                    console.log('Vincent SDK failed, trying direct URL fallback:', sdkError);
+                    
+                    // Fallback to direct URLs
+                    const vincentUrls = [
+                      \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`,
+                      \`https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`,
+                      \`https://vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`
+                    ];
+                    
+                    console.log('Opening Vincent consent URLs:', vincentUrls);
+                    
+                    // Open primary Vincent URL
+                    const consentWindow = window.open(vincentUrls[0], '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                    
+                    if (consentWindow) {
+                      showStatus('✅ Vincent consent page opened. Complete authentication there and return here.', 'success');
+                    } else {
+                      throw new Error('Popup blocked');
+                    }
                   }
                   
                 } catch (error) {
