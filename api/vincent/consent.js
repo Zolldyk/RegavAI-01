@@ -1,4 +1,4 @@
-// Vincent Consent Page - Working SDK Implementation
+// Vincent Consent Page - Fixed JavaScript Syntax
 export default async function handler (req, res) {
   // Enable CORS for Vincent domains
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -151,7 +151,7 @@ export default async function handler (req, res) {
                 console.log('Status:', message);
               }
               
-              // Vincent consent button handler - WORKING VERSION
+              // Vincent consent button handler - FIXED SYNTAX
               consentButton.addEventListener('click', async function() {
                 console.log('🚀 Grant Permission button clicked - Starting Vincent authentication');
                 consentButton.disabled = true;
@@ -162,7 +162,7 @@ export default async function handler (req, res) {
                   console.log('Loading Vincent SDK...');
                   const timestamp = Date.now();
                   const randomId = Math.random().toString(36).substring(7);
-                  const sdkUrl = \`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=\${randomId}&t=\${timestamp}\`;
+                  const sdkUrl = 'https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=' + randomId + '&t=' + timestamp;
                   
                   const vincentModule = await import(sdkUrl);
                   const { getVincentWebAppClient } = vincentModule;
@@ -189,7 +189,7 @@ export default async function handler (req, res) {
                   
                   // Method 2: Direct URL fallback
                   try {
-                    const directUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                    const directUrl = 'https://dashboard.heyvincent.ai/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
                     console.log('Opening direct Vincent URL:', directUrl);
                     
                     // Try opening in same window first
@@ -210,16 +210,9 @@ export default async function handler (req, res) {
                     showStatus('❌ All methods failed. Try manual link below.', 'error');
                     
                     // Method 3: Manual link
-                    const manualUrl = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
+                    const manualUrl = 'https://dashboard.heyvincent.ai/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
                     setTimeout(() => {
-                      statusDiv.innerHTML += \`
-                        <div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px;">
-                          <strong>Manual Access:</strong><br>
-                          <a href="\${manualUrl}" target="_blank" style="color: #667eea; font-weight: bold; text-decoration: none;">
-                            🔗 Click here to open Vincent Consent Page
-                          </a>
-                        </div>
-                      \`;
+                      statusDiv.innerHTML += '<div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px;"><strong>Manual Access:</strong><br><a href="' + manualUrl + '" target="_blank" style="color: #667eea; font-weight: bold; text-decoration: none;">🔗 Click here to open Vincent Consent Page</a></div>';
                     }, 1000);
                   }
                 }
