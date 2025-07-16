@@ -1,4 +1,4 @@
-// Vincent Consent Page Handler
+// Vincent Consent Page Handler - Production Version
 export default async function handler (req, res) {
   // Enable CORS for Vincent domains
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,7 +14,7 @@ export default async function handler (req, res) {
     const { method } = req;
 
     if (method === 'GET') {
-      // Return consent page that uses Vincent Web App Client
+      // Return simple, working consent page
       const appId = process.env.VINCENT_APP_ID || '983';
       const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000';
       const redirectUrl = `${baseUrl}/api/vincent/callback`;
@@ -25,65 +25,173 @@ export default async function handler (req, res) {
         <html>
           <head>
             <title>Vincent Consent - Regav Trading Agent</title>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <style>
-              body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-              .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-              .title { color: #333; font-size: 28px; margin-bottom: 20px; }
-              .subtitle { color: #666; font-size: 18px; margin-bottom: 30px; }
-              .permissions { text-align: left; margin: 20px 0; }
-              .permissions h3 { color: #333; margin-bottom: 10px; }
-              .permissions ul { color: #555; }
-              .permissions li { margin: 8px 0; }
-              .button { background: #007bff; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin: 20px 0; }
-              .button:hover { background: #0056b3; }
-              .info { color: #666; font-size: 14px; margin-top: 20px; }
-              .status { margin: 20px 0; padding: 15px; border-radius: 5px; }
-              .loading { background: #e3f2fd; color: #1976d2; }
-              .success { background: #e8f5e8; color: #2e7d32; }
-              .error { background: #ffebee; color: #c62828; }
+              body { 
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0; 
+                padding: 20px; 
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+              }
+              .container { 
+                max-width: 600px; 
+                background: white; 
+                padding: 40px; 
+                border-radius: 16px; 
+                box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                text-align: center;
+              }
+              .title { 
+                color: #333; 
+                font-size: 32px; 
+                margin-bottom: 10px;
+                font-weight: 600;
+              }
+              .subtitle { 
+                color: #666; 
+                font-size: 18px; 
+                margin-bottom: 30px; 
+              }
+              .permissions { 
+                text-align: left; 
+                margin: 30px 0; 
+                background: #f8f9fa;
+                padding: 20px;
+                border-radius: 8px;
+              }
+              .permissions h3 { 
+                color: #333; 
+                margin-bottom: 15px; 
+                font-size: 18px;
+              }
+              .permissions ul { 
+                color: #555; 
+                line-height: 1.6;
+              }
+              .permissions li { 
+                margin: 10px 0; 
+              }
+              .button { 
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white; 
+                padding: 16px 32px; 
+                border: none; 
+                border-radius: 8px; 
+                font-size: 18px; 
+                font-weight: 600;
+                cursor: pointer; 
+                margin: 15px 10px;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+              }
+              .button:hover { 
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+              }
+              .button:active {
+                transform: translateY(0);
+              }
+              .button.secondary {
+                background: #6c757d;
+                box-shadow: 0 4px 15px rgba(108, 117, 125, 0.4);
+              }
+              .button.secondary:hover {
+                box-shadow: 0 6px 20px rgba(108, 117, 125, 0.6);
+              }
+              .status { 
+                margin: 20px 0; 
+                padding: 15px; 
+                border-radius: 8px;
+                font-weight: 500;
+              }
+              .loading { 
+                background: #e3f2fd; 
+                color: #1976d2; 
+                border: 1px solid #bbdefb;
+              }
+              .success { 
+                background: #e8f5e8; 
+                color: #2e7d32; 
+                border: 1px solid #c8e6c9;
+              }
+              .error { 
+                background: #ffebee; 
+                color: #c62828; 
+                border: 1px solid #ffcdd2;
+              }
+              .info { 
+                color: #666; 
+                font-size: 14px; 
+                margin-top: 20px;
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+              }
+              @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+              }
+              .spinner {
+                display: inline-block;
+                width: 20px;
+                height: 20px;
+                border: 3px solid #f3f3f3;
+                border-top: 3px solid #667eea;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-right: 10px;
+              }
             </style>
           </head>
           <body>
             <div class="container">
               <div class="title">🔐 Vincent Consent Required</div>
-              <div class="subtitle">Regav Trading Agent needs your permission to execute trades</div>
+              <div class="subtitle">Authorize Regav Trading Agent</div>
               
               <div class="permissions">
-                <h3>Permissions Requested:</h3>
+                <h3>📋 Permissions Requested:</h3>
                 <ul>
-                  <li>Execute trades within spending limits</li>
-                  <li>Monitor portfolio performance</li>
-                  <li>Access market data and analysis</li>
-                  <li>Manage trading positions</li>
+                  <li>✅ Execute trades within spending limits</li>
+                  <li>✅ Monitor portfolio performance</li>
+                  <li>✅ Access market data and analysis</li>
+                  <li>✅ Manage trading positions</li>
                 </ul>
                 
-                <h3>Safety Policies:</h3>
+                <h3>🛡️ Safety Policies:</h3>
                 <ul>
-                  <li>Maximum trade amount: $${process.env.VINCENT_MAX_TRADE_AMOUNT || 1000}</li>
-                  <li>Trade expiry: ${process.env.VINCENT_TRADE_EXPIRY_MINUTES || 10} minutes</li>
-                  <li>Only approved tokens: BTC, ETH, SOL, XRP, USDT, USDC</li>
+                  <li>💰 Maximum trade amount: $${process.env.VINCENT_MAX_TRADE_AMOUNT || 1000}</li>
+                  <li>⏰ Trade expiry: ${process.env.VINCENT_TRADE_EXPIRY_MINUTES || 10} minutes</li>
+                  <li>🔒 Only approved tokens: BTC, ETH, SOL, XRP, USDT, USDC</li>
                 </ul>
               </div>
               
-              <button id="consentButton" class="button">Grant Permission</button>
-              <button id="directButton" class="button" style="background: #ff6b35; margin-top: 10px;">🔗 Direct Vincent Link</button>
-              <button id="ownerButton" class="button" style="background: #28a745; margin-top: 10px;">👑 Owner Auto-Grant</button>
+              <button id="consentButton" class="button">
+                🚀 Grant Permission
+              </button>
+              
+              <button id="ownerButton" class="button secondary">
+                👑 Owner Bypass
+              </button>
               
               <div id="status" class="status" style="display: none;"></div>
               
               <div class="info">
-                App ID: ${appId}<br>
-                Redirect URL: ${redirectUrl}<br>
-                Risk Level: MODERATE
+                <strong>App ID:</strong> ${appId}<br>
+                <strong>Redirect URL:</strong> ${redirectUrl}<br>
+                <strong>Environment:</strong> Production
               </div>
             </div>
             
-            <script type="module">
+            <script>
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
               const consentButton = document.getElementById('consentButton');
-              const directButton = document.getElementById('directButton');
               const ownerButton = document.getElementById('ownerButton');
               
               function showStatus(message, type = 'loading') {
@@ -95,20 +203,108 @@ export default async function handler (req, res) {
                 console.log('Status:', message);
               }
               
-              // Check if we're already returning from Vincent on page load
+              // Main consent button - simplified approach
+              consentButton.addEventListener('click', async function() {
+                console.log('Grant Permission button clicked');
+                showStatus('<span class="spinner"></span>Starting Vincent consent...', 'loading');
+                
+                try {
+                  // Direct approach: open Vincent consent URLs
+                  const vincentUrls = [
+                    \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`,
+                    \`https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`,
+                    \`https://vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}\`
+                  ];
+                  
+                  console.log('Opening Vincent consent URLs:', vincentUrls);
+                  
+                  // Open primary Vincent URL
+                  const consentWindow = window.open(vincentUrls[0], '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
+                  
+                  if (consentWindow) {
+                    showStatus('✅ Vincent consent page opened. Complete authentication there and return here.', 'success');
+                    
+                    // Try Vincent SDK as secondary approach
+                    setTimeout(async () => {
+                      try {
+                        const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
+                        const vincentAppClient = getVincentWebAppClient({ appId });
+                        
+                        if (vincentAppClient.redirectToLoginPage) {
+                          console.log('Vincent SDK available, attempting redirect...');
+                          vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
+                        }
+                      } catch (error) {
+                        console.log('Vincent SDK secondary attempt failed:', error);
+                      }
+                    }, 1000);
+                    
+                  } else {
+                    throw new Error('Popup blocked');
+                  }
+                  
+                } catch (error) {
+                  console.error('Error starting Vincent consent:', error);
+                  showStatus('❌ Failed to open Vincent consent. Try clicking the links below manually.', 'error');
+                  
+                  // Show manual links
+                  setTimeout(() => {
+                    statusDiv.innerHTML += \`
+                      <div style="margin-top: 15px;">
+                        <strong>Manual Options:</strong><br>
+                        <a href="https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}" target="_blank" style="color: #667eea;">🔗 Vincent Dashboard</a><br>
+                        <a href="https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(redirectUrl)}" target="_blank" style="color: #667eea;">🔗 Vincent App</a>
+                      </div>
+                    \`;
+                  }, 1000);
+                }
+              });
+              
+              // Owner bypass button
+              ownerButton.addEventListener('click', function() {
+                console.log('Owner bypass button clicked');
+                
+                const confirmOwner = confirm('⚠️ Are you the owner of this trading agent?\\n\\nThis will bypass Vincent consent and auto-grant permissions.');
+                
+                if (confirmOwner) {
+                  showStatus('<span class="spinner"></span>Auto-granting owner permissions...', 'loading');
+                  
+                  const ownerJWT = {
+                    jwt: 'owner-auto-grant-' + Date.now(),
+                    timestamp: Date.now(),
+                    source: 'owner_auto_grant',
+                    ownerBypass: true,
+                    pkpTokenId: '${process.env.VINCENT_PKP_TOKEN_ID || 'auto-grant-pkp-token'}'
+                  };
+                  
+                  fetch(redirectUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ownerJWT)
+                  }).then(response => {
+                    if (response.ok) {
+                      showStatus('✅ Owner permissions auto-granted! You can close this window and check your trading agent.', 'success');
+                    } else {
+                      showStatus('❌ Failed to auto-grant permissions. Please try the Grant Permission button instead.', 'error');
+                    }
+                  }).catch(err => {
+                    console.error('Auto-grant error:', err);
+                    showStatus('❌ Auto-grant failed. Please try the Grant Permission button instead.', 'error');
+                  });
+                } else {
+                  showStatus('Please use the Grant Permission button to complete Vincent consent.', 'loading');
+                }
+              });
+              
+              // Check for existing JWT on page load
               async function checkForExistingJWT() {
                 try {
-                  // Import Vincent SDK
                   const timestamp = new Date().getTime();
-                  const vincentUrl = \`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`;
-                  const vincentModule = await import(vincentUrl);
-                  const { getVincentWebAppClient } = vincentModule;
-                  
+                  const { getVincentWebAppClient } = await import(\`https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?t=\${timestamp}\`);
                   const vincentAppClient = getVincentWebAppClient({ appId });
                   
-                  // Check if this is a login URI with JWT token
-                  if (vincentAppClient.isLoginUri()) {
-                    showStatus('🔄 Processing existing Vincent consent...', 'loading');
+                  if (vincentAppClient.isLoginUri && vincentAppClient.isLoginUri()) {
+                    showStatus('<span class="spinner"></span>Processing existing Vincent consent...', 'loading');
                     
                     const { decodedJWT, jwtStr } = vincentAppClient.decodeVincentLoginJWT(window.location.href);
                     
@@ -135,100 +331,15 @@ export default async function handler (req, res) {
                   }
                   return false;
                 } catch (error) {
-                  console.error('Error checking for existing JWT:', error);
+                  console.log('No existing JWT found or error checking:', error);
                   return false;
                 }
               }
               
-              // Simple direct approach - just open Vincent consent page
-              consentButton.addEventListener('click', function() {
-                console.log('Grant Permission button clicked');
-                showStatus('🔄 Opening Vincent consent page...', 'loading');
-                
-                // Use multiple Vincent consent URL formats
-                const vincentUrls = [
-                  \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`,
-                  \`https://app.vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(window.location.href)}\`,
-                  \`https://vincent.domains/consent?appId=\${appId}&redirectUrl=\${encodeURIComponent(window.location.href)}\`
-                ];
-                
-                console.log('Opening Vincent URLs:', vincentUrls);
-                
-                // Open the first URL
-                window.open(vincentUrls[0], '_blank');
-                showStatus('✅ Vincent consent page opened in new tab. Complete the process there and return here.', 'success');
-                
-                // Also try SDK approach in parallel
-                setTimeout(async () => {
-                  try {
-                    console.log('Attempting Vincent SDK approach...');
-                    const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
-                    const vincentAppClient = getVincentWebAppClient({ appId });
-                    
-                    // Try to redirect with SDK if available
-                    if (vincentAppClient.redirectToLoginPage) {
-                      vincentAppClient.redirectToLoginPage({ redirectUri: window.location.href });
-                    } else if (vincentAppClient.redirectToConsentPage) {
-                      vincentAppClient.redirectToConsentPage({ redirectUri: window.location.href });
-                    }
-                  } catch (error) {
-                    console.log('Vincent SDK fallback failed:', error.message);
-                  }
-                }, 500);
-              });
-              
-              // Direct Vincent link button
-              directButton.addEventListener('click', function() {
-                console.log('Direct Vincent link button clicked');
-                showStatus('🔗 Opening Vincent dashboard directly...', 'loading');
-                
-                const vincentDashboard = \`https://dashboard.heyvincent.ai/\${appId}/consent?redirectUri=\${encodeURIComponent(window.location.href)}\`;
-                window.open(vincentDashboard, '_blank');
-                showStatus('✅ Vincent dashboard opened. Complete consent there and return here.', 'success');
-              });
-              
-              // Owner auto-grant button
-              ownerButton.addEventListener('click', function() {
-                console.log('Owner auto-grant button clicked');
-                
-                const confirmOwner = confirm('Are you the owner of this trading agent? This will bypass Vincent consent and auto-grant permissions.');
-                
-                if (confirmOwner) {
-                  showStatus('🔄 Auto-granting owner permissions...', 'loading');
-                  
-                  // Create owner auto-grant JWT
-                  const ownerJWT = {
-                    jwt: 'owner-auto-grant-' + Date.now(),
-                    timestamp: Date.now(),
-                    source: 'owner_auto_grant',
-                    ownerBypass: true,
-                    pkpTokenId: '${process.env.VINCENT_PKP_TOKEN_ID || 'auto-grant-pkp-token'}'
-                  };
-                  
-                  // Send to callback endpoint
-                  fetch(redirectUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(ownerJWT)
-                  }).then(response => {
-                    if (response.ok) {
-                      showStatus('✅ Owner permissions auto-granted! You can close this window and check your trading agent.', 'success');
-                    } else {
-                      showStatus('❌ Failed to auto-grant permissions. Please try the Grant Permission button instead.', 'error');
-                    }
-                  }).catch(err => {
-                    console.error('Auto-grant error:', err);
-                    showStatus('❌ Auto-grant failed. Please try the Grant Permission button instead.', 'error');
-                  });
-                } else {
-                  showStatus('Please use the Grant Permission button to complete Vincent consent.', 'loading');
-                }
-              });
-              
-              // Check for existing JWT on page load
+              // Initialize page
               checkForExistingJWT().then(hasJWT => {
                 if (!hasJWT) {
-                  showStatus('✅ Ready to grant permissions. Click the button above.', 'success');
+                  showStatus('✅ Ready to grant permissions. Click the button above to continue.', 'success');
                 }
               });
             </script>
