@@ -1,4 +1,4 @@
-// Vincent Consent Page - Fixed JavaScript Syntax
+// Vincent Consent Page - Browser-Compatible Implementation
 export default async function handler (req, res) {
   // Enable CORS for Vincent domains
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -138,7 +138,7 @@ export default async function handler (req, res) {
               </div>
             </div>
             
-            <script>
+            <script type="module">
               const appId = '${appId}';
               const redirectUrl = '${redirectUrl}';
               const statusDiv = document.getElementById('status');
@@ -151,66 +151,74 @@ export default async function handler (req, res) {
                 console.log('Status:', message);
               }
               
-              // Vincent consent button handler - FIXED SYNTAX
+              // Vincent consent button handler - PROPER BROWSER IMPLEMENTATION
               consentButton.addEventListener('click', async function() {
                 console.log('🚀 Grant Permission button clicked - Starting Vincent authentication');
+                console.log('Current URL:', window.location.href);
+                console.log('App ID:', appId);
+                
                 consentButton.disabled = true;
                 showStatus('<span class="spinner"></span>Loading Vincent SDK...', 'loading');
                 
                 try {
-                  // Method 1: Try Vincent SDK
+                  // Method 1: Try Vincent SDK with proper error handling
                   console.log('Loading Vincent SDK...');
                   const timestamp = Date.now();
                   const randomId = Math.random().toString(36).substring(7);
                   const sdkUrl = 'https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js?v=' + randomId + '&t=' + timestamp;
                   
+                  console.log('SDK URL:', sdkUrl);
                   const vincentModule = await import(sdkUrl);
-                  const { getVincentWebAppClient } = vincentModule;
+                  console.log('Vincent module loaded:', Object.keys(vincentModule));
                   
-                  console.log('Vincent SDK loaded successfully');
+                  const { getVincentWebAppClient } = vincentModule;
+                  console.log('getVincentWebAppClient type:', typeof getVincentWebAppClient);
+                  
                   const vincentAppClient = getVincentWebAppClient({ appId: appId });
+                  console.log('Vincent client created:', vincentAppClient);
+                  console.log('Available methods:', Object.keys(vincentAppClient));
                   
                   showStatus('<span class="spinner"></span>Redirecting to Vincent consent page...', 'loading');
                   
-                  // Use the correct method from Vincent SDK
-                  console.log('Calling redirectToConsentPage...');
-                  vincentAppClient.redirectToConsentPage({ 
+                  // Use the official Vincent SDK method
+                  console.log('Calling redirectToConsentPage with redirectUri:', window.location.href);
+                  
+                  // This should redirect to Vincent's consent page
+                  const result = vincentAppClient.redirectToConsentPage({ 
                     redirectUri: window.location.href 
                   });
                   
-                  // If redirect doesn't happen immediately, show message
-                  setTimeout(() => {
-                    showStatus('✅ Redirecting to Vincent... If not redirected, check popup blockers.', 'success');
-                  }, 2000);
+                  console.log('redirectToConsentPage result:', result);
+                  
+                  // If we get here, the redirect should have happened
+                  showStatus('✅ Redirecting to Vincent authentication...', 'success');
                   
                 } catch (sdkError) {
-                  console.error('Vincent SDK failed:', sdkError);
+                  console.error('❌ Vincent SDK failed with error:', sdkError);
+                  console.error('Error details:', sdkError.message);
+                  console.error('Error stack:', sdkError.stack);
+                  
                   showStatus('⚠️ Vincent SDK failed, trying direct URL...', 'error');
                   
-                  // Method 2: Direct URL fallback
+                  // Method 2: Direct URL fallback (what Vincent SDK should do)
                   try {
-                    const directUrl = 'https://dashboard.heyvincent.ai/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
-                    console.log('Opening direct Vincent URL:', directUrl);
+                    const directUrl = 'https://dashboard.heyvincent.ai/appId/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
+                    console.log('Direct Vincent URL:', directUrl);
                     
-                    // Try opening in same window first
-                    window.location.href = directUrl;
+                    showStatus('🔄 Opening Vincent consent page directly...', 'loading');
                     
-                    // If that doesn't work, try popup
-                    setTimeout(() => {
-                      const popup = window.open(directUrl, '_blank', 'width=600,height=700,scrollbars=yes,resizable=yes');
-                      if (popup) {
-                        showStatus('✅ Vincent consent page opened in popup. Complete authentication there.', 'success');
-                      } else {
-                        throw new Error('Popup blocked');
-                      }
-                    }, 1000);
+                    // Try the same method Vincent SDK uses
+                    window.open(directUrl, '_self');
                     
-                  } catch (popupError) {
-                    console.error('Direct URL failed:', popupError);
-                    showStatus('❌ All methods failed. Try manual link below.', 'error');
+                    // If we get here, show success
+                    showStatus('✅ Redirecting to Vincent...', 'success');
+                    
+                  } catch (directError) {
+                    console.error('❌ Direct URL failed:', directError);
+                    showStatus('❌ Direct redirect failed. Showing manual link...', 'error');
                     
                     // Method 3: Manual link
-                    const manualUrl = 'https://dashboard.heyvincent.ai/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
+                    const manualUrl = 'https://dashboard.heyvincent.ai/appId/' + appId + '/consent?redirectUri=' + encodeURIComponent(window.location.href);
                     setTimeout(() => {
                       statusDiv.innerHTML += '<div style="margin-top: 15px; padding: 15px; background: #f0f0f0; border-radius: 8px;"><strong>Manual Access:</strong><br><a href="' + manualUrl + '" target="_blank" style="color: #667eea; font-weight: bold; text-decoration: none;">🔗 Click here to open Vincent Consent Page</a></div>';
                     }, 1000);
@@ -220,10 +228,13 @@ export default async function handler (req, res) {
                 // Re-enable button after delay
                 setTimeout(() => {
                   consentButton.disabled = false;
-                }, 10000);
+                }, 5000);
               });
               
               // Initialize page
+              console.log('Page initialized');
+              console.log('Window object available:', typeof window !== 'undefined');
+              console.log('Current location:', window.location.href);
               showStatus('✅ Ready to authenticate. Click the button above to continue.', 'success');
             </script>
           </body>

@@ -1,5 +1,5 @@
 // Vincent Authentication Callback Handler
-export default async function handler(req, res) {
+export default async function handler (req, res) {
   // Enable CORS for Vincent domains
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -126,6 +126,8 @@ export default async function handler(req, res) {
             <div id="status" class="message loading">Checking for authentication token...</div>
             
             <script type="module">
+              const appId = '${appId}';
+              
               async function processVincentCallback() {
                 const statusDiv = document.getElementById('status');
                 
@@ -133,14 +135,14 @@ export default async function handler(req, res) {
                   // Import Vincent Web App Client
                   const { getVincentWebAppClient } = await import('https://unpkg.com/@lit-protocol/vincent-app-sdk@1.0.2/dist/src/index.js');
                   
-                  const vincentAppClient = getVincentWebAppClient({ appId: '${appId}' });
+                  const vincentAppClient = getVincentWebAppClient({ appId: appId });
                   
                   // Check if this is a login URI (has JWT token)
                   if (vincentAppClient.isLoginUri()) {
                     statusDiv.innerHTML = '🔄 Processing Vincent authentication...';
                     
                     try {
-                      const { decodedJWT, jwtStr } = vincentAppClient.decodeVincentLoginJWT(window.location.origin);
+                      const { decodedJWT, jwtStr } = vincentAppClient.decodeVincentLoginJWT(window.location.href);
                       
                       console.log('Vincent JWT found:', {
                         jwtStr: jwtStr.substring(0, 100) + '...',
