@@ -1,6 +1,6 @@
 # RegAV AI Scalping Bot
 
-A high-frequency cryptocurrency trading bot built for the Recall Hackathon, featuring advanced AI-powered market analysis, automated trading execution, and comprehensive risk management.
+A high-frequency cryptocurrency trading bot built for the Recall Hackathon that features advanced AI-powered market analysis, automated trading execution, and comprehensive risk management.
 
 ## 🚀 Quick Start
 
