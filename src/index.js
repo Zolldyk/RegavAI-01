@@ -229,6 +229,7 @@ class EnhancedTradingAgent {
       // ============ Initialize Gaia Client ============
       this.logger.info('Initializing Gaia client...');
       this.gaiaClient = getGaiaClient();
+      await this.gaiaClient.initialize();
       this.logger.info('✅ Gaia client initialized');
 
       // ============ Validate Client Connections ============
@@ -334,7 +335,7 @@ class EnhancedTradingAgent {
       // ============ Test Gaia Connection ============
       const gaiaModels = await this.gaiaClient.getModels();
       this.logger.info('Gaia connection validated', {
-        modelsAvailable: gaiaModels.length > 0
+        modelsAvailable: Array.isArray(gaiaModels) && gaiaModels.length > 0
       });
 
       // Note: Vincent validation happens during tool execution
@@ -658,12 +659,15 @@ class EnhancedTradingAgent {
      */
   _setupGracefulShutdown () {
     // ============ Handle Termination Signals ============
-    ['SIGTERM', 'SIGINT', 'SIGUSR2'].forEach(signal => {
-      process.on(signal, async () => {
-        this.logger.info(`Received ${signal}, initiating graceful shutdown...`);
-        await this.handleShutdown();
-      });
-    });
+    const shutdownHandler = async (signal) => {
+      this.logger.info(`Received ${signal}, initiating graceful shutdown...`);
+      await this.handleShutdown();
+      process.exit(0);
+    };
+
+    process.once('SIGTERM', shutdownHandler);
+    process.once('SIGINT', shutdownHandler);
+    process.once('SIGUSR2', shutdownHandler);
 
     this.logger.info('Graceful shutdown handlers configured');
   }
@@ -772,6 +776,22 @@ class EnhancedTradingAgent {
       // ============ Stop Health Checks ============
       if (this.healthCheckInterval) {
         clearInterval(this.healthCheckInterval);
+      }
+
+      // ============ Disconnect All Clients ============
+      if (this.vincentClient) {
+        this.logger.info('Disconnecting Vincent client...');
+        await this.vincentClient.disconnect();
+      }
+
+      if (this.recallClient) {
+        this.logger.info('Disconnecting Recall client...');
+        await this.recallClient.disconnect();
+      }
+
+      if (this.gaiaClient) {
+        this.logger.info('Disconnecting Gaia client...');
+        await this.gaiaClient.disconnect();
       }
 
       // ============ Stop Performance Monitoring ============

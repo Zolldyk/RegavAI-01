@@ -94,18 +94,37 @@ class VincentConsentManager extends EventEmitter {
 
             // Handle owner auto-grant bypass
             if (callbackConsent.ownerBypass) {
+              // Get delegatee signer address from environment
+              const delegateePrivateKey = process.env.VINCENT_APP_DELEGATEE_PRIVATE_KEY;
+              let delegateeAddress = null;
+
+              if (delegateePrivateKey) {
+                try {
+                  const { ethers } = await import('ethers');
+                  const wallet = new ethers.Wallet(delegateePrivateKey);
+                  delegateeAddress = wallet.address;
+                } catch (error) {
+                  logger.error('Error getting delegatee address:', error);
+                }
+              }
+
               userInfo = {
-                pkpAddress: 'owner-auto-grant-address',
-                pkpPublicKey: 'owner-auto-grant-public-key',
-                pkpTokenId: callbackConsent.pkpTokenId || process.env.VINCENT_PKP_TOKEN_ID || 'owner-auto-grant-token-id',
-                appId: '983',
-                appVersion: 'owner-bypass',
+                pkpAddress: delegateeAddress || 'owner-auto-grant-address',
+                pkpPublicKey: delegateeAddress ? '0x04' + delegateeAddress.slice(2) : 'owner-auto-grant-public-key',
+                pkpTokenId: callbackConsent.pkpTokenId || process.env.VINCENT_PKP_TOKEN_ID || process.env.LIT_CAPACITY_CREDIT_TOKEN_ID,
+                appId: process.env.VINCENT_APP_ID || '983',
+                appVersion: process.env.VINCENT_APP_VERSION || 1,
                 authMethod: 'owner_auto_grant',
                 consentTimestamp: Date.now(),
                 expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24 hours
-                ownerBypass: true
+                ownerBypass: true,
+                isValidForTrading: true
               };
-              logger.info('✅ Owner auto-grant processed successfully');
+              logger.info('✅ Vincent authentication automatically granted (owner mode)', {
+                pkpTokenId: userInfo.pkpTokenId,
+                pkpAddress: userInfo.pkpAddress,
+                authMethod: 'owner_auto_grant'
+              });
             } else {
               userInfo = await this.handleConsentCallback(callbackConsent.jwt);
             }
@@ -132,9 +151,13 @@ class VincentConsentManager extends EventEmitter {
           this.consentCompleted = true;
 
           logger.info('✅ Vincent consent completed successfully');
-          logger.info('\n🎉 CONSENT COMPLETED!');
+          logger.info('\n🎉 AUTHENTICATION COMPLETED!');
           logger.info('==========================================');
-          logger.info('✅ Vincent permissions granted');
+          if (this.userInfo.ownerBypass) {
+            logger.info('✅ Vincent authentication automatically granted (owner mode)');
+          } else {
+            logger.info('✅ Vincent permissions granted via consent flow');
+          }
           logger.info('📊 PKP Token ID:', this.userInfo.pkpTokenId);
           logger.info('🚀 Resuming automated trading...');
           logger.info('==========================================\n');
@@ -234,11 +257,43 @@ class VincentConsentManager extends EventEmitter {
   }
 
   isConsentValid (consent) {
-    if (!consent || !consent.userInfo || !consent.jwt) {
+    if (!consent || !consent.userInfo) {
       return false;
     }
 
     try {
+      // Handle owner auto-grant bypass
+      if (consent.userInfo.ownerBypass && consent.userInfo.authMethod === 'owner_auto_grant') {
+        // Check if owner auto-grant has expired
+        const now = Date.now();
+        const expiresAt = consent.userInfo.expiresAt;
+
+        if (expiresAt && now > expiresAt) {
+          logger.info('Owner auto-grant has expired, requiring re-authentication');
+          return false;
+        }
+
+        // Check if consent is less than 24 hours old (safety check)
+        const consentAge = now - consent.timestamp;
+        const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (consentAge > maxAge) {
+          logger.info('Owner auto-grant is too old, requiring re-authentication');
+          return false;
+        }
+
+        logger.info('✅ Vincent authentication valid (owner mode)', {
+          pkpTokenId: consent.userInfo.pkpTokenId,
+          authMethod: consent.userInfo.authMethod
+        });
+        return true;
+      }
+
+      // Handle normal JWT validation
+      if (!consent.jwt) {
+        return false;
+      }
+
       // Additional JWT validation
       const { jwt } = require('@lit-protocol/vincent-app-sdk');
 

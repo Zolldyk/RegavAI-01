@@ -18,22 +18,23 @@ const timestampFormat = format.timestamp({
  * @notice Custom format for trade-related logs
  */
 const tradeLogFormat = format.printf(({ timestamp, level, message, tradeId, pair, action, amount, price, meta, ...rest }) => {
-  let logMessage = `${timestamp} [${level.toUpperCase()}]`;
+  const time = timestamp.replace(/T/, ' ').replace(/\..+/, '');
+  let logMessage = `${time} [${level.toUpperCase()}]`;
 
   // Add trade-specific information if available
-  if (tradeId) logMessage += ` [TRADE:${tradeId}]`;
-  if (pair) logMessage += ` [${pair}]`;
-  if (action) logMessage += ` [${action.toUpperCase()}]`;
+  if (tradeId) logMessage += ` 🔸 [TRADE:${tradeId}]`;
+  if (pair) logMessage += ` 💱 [${pair}]`;
+  if (action) logMessage += ` ⚡ [${action.toUpperCase()}]`;
 
   logMessage += ` ${message}`;
 
   // Add trade details if available
-  if (amount) logMessage += ` | Amount: ${amount}`;
-  if (price) logMessage += ` | Price: ${price}`;
+  if (amount) logMessage += ` | 📊 Amount: ${amount}`;
+  if (price) logMessage += ` | 💰 Price: ${price}`;
 
   // Add metadata if present
   if (meta && Object.keys(meta).length > 0) {
-    logMessage += ` | Meta: ${JSON.stringify(meta)}`;
+    logMessage += ` | 📋 Meta: ${JSON.stringify(meta)}`;
   }
 
   // Add any additional fields
@@ -50,16 +51,17 @@ const tradeLogFormat = format.printf(({ timestamp, level, message, tradeId, pair
  * @notice Custom format for sentiment analysis logs
  */
 const sentimentLogFormat = format.printf(({ timestamp, level, message, source, sentiment, confidence, symbol, ...rest }) => {
-  let logMessage = `${timestamp} [${level.toUpperCase()}] [SENTIMENT]`;
+  const time = timestamp.replace(/T/, ' ').replace(/\..+/, '');
+  let logMessage = `${time} [${level.toUpperCase()}] 🧠 [SENTIMENT]`;
 
-  if (symbol) logMessage += ` [${symbol}]`;
-  if (source) logMessage += ` [${source.toUpperCase()}]`;
+  if (symbol) logMessage += ` 🪙 [${symbol}]`;
+  if (source) logMessage += ` 📡 [${source.toUpperCase()}]`;
 
   logMessage += ` ${message}`;
 
   // Add sentiment details
-  if (sentiment !== undefined) logMessage += ` | Sentiment: ${sentiment}`;
-  if (confidence !== undefined) logMessage += ` | Confidence: ${confidence}`;
+  if (sentiment !== undefined) logMessage += ` | 📊 Sentiment: ${sentiment}`;
+  if (confidence !== undefined) logMessage += ` | 🎯 Confidence: ${confidence}`;
 
   // Add any additional fields
   const additionalFields = Object.keys(rest);
@@ -75,15 +77,16 @@ const sentimentLogFormat = format.printf(({ timestamp, level, message, source, s
  * @notice Custom format for performance monitoring logs
  */
 const performanceLogFormat = format.printf(({ timestamp, level, message, operation, duration, memoryUsage, ...rest }) => {
-  let logMessage = `${timestamp} [${level.toUpperCase()}] [PERF]`;
+  const time = timestamp.replace(/T/, ' ').replace(/\..+/, '');
+  let logMessage = `${time} [${level.toUpperCase()}] ⚡ [PERF]`;
 
-  if (operation) logMessage += ` [${operation}]`;
+  if (operation) logMessage += ` 🔧 [${operation}]`;
 
   logMessage += ` ${message}`;
 
   // Add performance metrics
-  if (duration !== undefined) logMessage += ` | Duration: ${duration}ms`;
-  if (memoryUsage) logMessage += ` | Memory: ${JSON.stringify(memoryUsage)}`;
+  if (duration !== undefined) logMessage += ` | ⏱️ Duration: ${duration}ms`;
+  if (memoryUsage) logMessage += ` | 🧠 Memory: ${JSON.stringify(memoryUsage)}`;
 
   // Add any additional fields
   const additionalFields = Object.keys(rest);
@@ -184,7 +187,17 @@ class Logger {
         format: format.combine(
           format.colorize(),
           timestampFormat,
-          format.simple()
+          format.printf(({ timestamp, level, message, ...meta }) => {
+            const time = timestamp.replace(/T/, ' ').replace(/\..+/, '');
+            let logMessage = `${time} [${level}] ${message}`;
+
+            // Add metadata if present
+            if (Object.keys(meta).length > 0) {
+              logMessage += ` ${JSON.stringify(meta)}`;
+            }
+
+            return logMessage;
+          })
         )
       }));
     }
@@ -849,6 +862,7 @@ class Logger {
   triggerCriticalAlert (message, data) {
     // Implementation would depend on configured alerting systems
     // Could include webhook calls, Telegram notifications, etc.
+    // eslint-disable-next-line no-console
     console.error('🚨 CRITICAL ALERT:', message, data);
   }
 

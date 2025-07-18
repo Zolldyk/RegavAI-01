@@ -259,5 +259,26 @@ mcp.json
 # Dist and build outputs - contains sensitive deployment CIDs
 dist/
 
-# Agent start scripts (may contain sensitive configs)
+# Agent start scripts (may contain sensitive configs) - exclude main agent
 start-*.js
+!start-recall-agent.js
+
+# Development documentation containing sensitive information
+CLAUDE.md
+
+# MCP configuration files (may contain sensitive endpoints)
+mcp.json
+
+# Test files that may contain sensitive data
+test-full-trading-agent*.js
+
+# Vincent consent callback files (contain PKP token IDs)
+.vincent-consent-callback.json
+*vincent-consent*.json
+
+# Vercel project configuration (contains project/org IDs)
+.vercel/
+
+# Competition and deployment scripts (may contain sensitive configs)
+start-competition.sh
+scripts/deploy-pinata.js

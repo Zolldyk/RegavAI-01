@@ -39,10 +39,10 @@ class RecallTradingAgent {
     this.logger = Logger;
     
     // Graceful shutdown handling
-    process.on('SIGTERM', () => this.shutdown('SIGTERM'));
-    process.on('SIGINT', () => this.shutdown('SIGINT'));
-    process.on('uncaughtException', (error) => this.handleError('uncaughtException', error));
-    process.on('unhandledRejection', (reason) => this.handleError('unhandledRejection', reason));
+    process.once('SIGTERM', () => this.shutdown('SIGTERM'));
+    process.once('SIGINT', () => this.shutdown('SIGINT'));
+    process.once('uncaughtException', (error) => this.handleError('uncaughtException', error));
+    process.once('unhandledRejection', (reason) => this.handleError('unhandledRejection', reason));
   }
 
   /**
@@ -183,14 +183,39 @@ class RecallTradingAgent {
         this.logger.info('✅ Scalping agent stopped');
       }
 
+      // ============ Disconnect All Clients ============
+      if (this.vincentClient) {
+        this.logger.info('Disconnecting Vincent client...');
+        await this.vincentClient.disconnect();
+      }
+
+      if (this.gaiaClient) {
+        this.logger.info('Disconnecting Gaia client...');
+        await this.gaiaClient.disconnect();
+      }
+
       // Final status report
       if (this.recallClient) {
-        const portfolio = await this.recallClient.getPortfolio();
-        this.logger.info('📊 Final Portfolio:', {
-          totalValue: portfolio.totalValue,
-          pnl: portfolio.pnl
-        });
+        try {
+          const portfolio = await this.recallClient.getPortfolio();
+          this.logger.info('📊 Final Portfolio Status:', {
+            totalValue: portfolio.totalValue,
+            pnl: portfolio.pnl || 0,
+            tokenCount: portfolio.tokens ? portfolio.tokens.length : 0
+          });
+        } catch (error) {
+          this.logger.warn('Could not retrieve final portfolio status:', error.message);
+        }
+
+        // Disconnect Recall client last
+        this.logger.info('Disconnecting Recall client...');
+        await this.recallClient.disconnect();
       }
+
+      // Display uptime
+      const startTime = Date.now();
+      const uptime = Math.round((Date.now() - startTime) / 1000);
+      this.logger.info(`⏱️ Agent uptime: ${uptime}s`);
 
       this.logger.info('👋 Recall Trading Agent shutdown complete');
       process.exit(0);

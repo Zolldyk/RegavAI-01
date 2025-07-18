@@ -1985,6 +1985,57 @@ RESPOND IN THIS EXACT JSON FORMAT:
       return health;
     }
   }
+
+  /**
+   * @notice Simple ping to check Gaia node latency and connectivity
+   * @dev Tests connection and returns response time
+   * @returns {Object} Ping result with latency and status
+   */
+  async ping () {
+    try {
+      const startTime = Date.now();
+      await this._testConnection();
+      const latency = Date.now() - startTime;
+
+      return {
+        status: 'success',
+        latency,
+        timestamp: Date.now(),
+        nodeUrl: this.nodeUrl
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        error: error.message,
+        latency: null,
+        timestamp: Date.now(),
+        nodeUrl: this.nodeUrl
+      };
+    }
+  }
+
+  /**
+   * @notice Disconnect and cleanup Gaia client
+   * @dev Stops all intervals and clears queues
+   */
+  async disconnect () {
+    try {
+      // ============ Clear Request Queue ============
+      this.requestQueue.length = 0;
+
+      // ============ Clear Cache ============
+      this.cache.clear();
+
+      // ============ Reset State ============
+      this.isConnected = false;
+      this.isInitialized = false;
+
+      this.logger.info('Gaia client disconnected successfully');
+    } catch (error) {
+      this.logger.error('Failed to disconnect Gaia client', { error: error.message });
+      throw error;
+    }
+  }
 }
 
 export default GaiaClient;

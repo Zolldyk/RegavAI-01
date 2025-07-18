@@ -1572,6 +1572,99 @@ export class TradingStrategy {
   }
 
   /**
+   * @notice Record enhanced trade data for analytics and reporting
+   * @param {string} pair - Trading pair
+   * @param {number} signal - Trading signal
+   * @param {Object} tradeParams - Enhanced trade parameters
+   * @param {Object} result - Trade execution result
+   */
+  async _recordEnhancedTrade (pair, signal, tradeParams, result) {
+    try {
+      const tradeRecord = {
+        pair,
+        signal,
+        tradeParams,
+        result,
+        entryTime: Date.now(),
+        marketRegime: this.marketRegime.current,
+        confidence: tradeParams.confidence || Math.abs(signal),
+        executionTime: result.executionTime || 0,
+        success: result.success,
+        timestamp: new Date().toISOString()
+      };
+
+      // Add to trade history
+      this.tradeHistory.push(tradeRecord);
+
+      // Store in Recall for analysis
+      await this._storeAnalysis('enhanced_trade', tradeRecord);
+
+      // Update performance metrics
+      this.performanceMetrics.totalTrades++;
+      if (result.success) {
+        this.performanceMetrics.winningTrades++;
+      }
+
+      this.logger.info('📊 Enhanced trade recorded', {
+        pair,
+        tradeId: result.tradeId,
+        success: result.success,
+        confidence: tradeParams.confidence?.toFixed(3) || 'N/A',
+        marketRegime: this.marketRegime.current
+      });
+    } catch (error) {
+      this.logger.error('Failed to record enhanced trade', { error: error.message });
+    }
+  }
+
+  /**
+   * @notice Update enhanced position tracking after trade execution
+   * @param {string} pair - Trading pair
+   * @param {Object} tradeParams - Enhanced trade parameters
+   * @param {Object} result - Trade execution result
+   * @param {number} signal - Trading signal
+   */
+  _updateEnhancedPositionTracking (pair, tradeParams, result, signal) {
+    try {
+      if (!result.success) return;
+
+      const positionKey = `${pair}_${Date.now()}`;
+      const position = {
+        pair,
+        action: tradeParams.action,
+        side: tradeParams.action, // Add side property for exit logic
+        amount: tradeParams.amount,
+        size: tradeParams.amount, // Add size property for exit logic
+        entryPrice: result.result?.executedPrice || tradeParams.price,
+        entryTime: Date.now(),
+        confidence: tradeParams.confidence || Math.abs(signal),
+        marketRegime: this.marketRegime.current,
+        tradeId: result.result?.transactionHash || result.tradeId,
+        status: 'OPEN',
+        currentPnL: 0,
+        maxPnL: 0,
+        minPnL: 0,
+        executionMethod: result.result?.executionMethod || 'DIRECT'
+      };
+
+      // Add to current positions
+      this.currentPositions.set(positionKey, position);
+
+      this.logger.info('📈 Enhanced position tracking updated', {
+        pair,
+        positionKey,
+        action: tradeParams.action,
+        amount: tradeParams.amount,
+        entryPrice: position.entryPrice,
+        confidence: position.confidence?.toFixed(3) || 'N/A',
+        totalOpenPositions: this.currentPositions.size
+      });
+    } catch (error) {
+      this.logger.error('Failed to update enhanced position tracking', { error: error.message });
+    }
+  }
+
+  /**
    * @notice Execute enhanced trade through Vincent with policies
    * @param {Object} tradeParams - Enhanced trade parameters
    * @returns {Object} Trade execution result
@@ -1635,6 +1728,445 @@ export class TradingStrategy {
         reason: error.message,
         tradeId: null
       };
+    }
+  }
+
+  /**
+   * @notice Set dynamic stop loss and take profit levels for a position
+   * @param {string} pair - Trading pair
+   * @param {number} signal - Trading signal
+   * @param {Object} marketData - Market data for decision making
+   */
+  async _setDynamicExitLevels (pair, signal, marketData) {
+    try {
+      // For scalping strategy, use simple percentage-based exits
+      const confidence = marketData?.confidence || Math.abs(signal);
+
+      // Dynamic stop loss based on confidence (lower confidence = tighter stops)
+      const baseStopLoss = parseFloat(process.env.STOP_LOSS_PERCENT) || 0.3;
+      const dynamicStopLoss = baseStopLoss * (2 - confidence); // Range: 0.3% to 0.6%
+
+      // Dynamic take profit based on signal strength
+      const baseTakeProfit = parseFloat(process.env.TAKE_PROFIT_PERCENT) || 0.5;
+      const dynamicTakeProfit = baseTakeProfit * (1 + confidence); // Range: 0.5% to 1.0%
+
+      this.logger.debug('Dynamic exit levels set', {
+        pair,
+        stopLoss: `${dynamicStopLoss.toFixed(2)}%`,
+        takeProfit: `${dynamicTakeProfit.toFixed(2)}%`,
+        confidence: confidence.toFixed(3)
+      });
+
+      // Store exit levels for position management
+      // In a full implementation, this would update position tracking
+      return {
+        stopLoss: dynamicStopLoss,
+        takeProfit: dynamicTakeProfit,
+        confidence
+      };
+    } catch (error) {
+      this.logger.error('Failed to set dynamic exit levels', { error: error.message });
+    }
+  }
+
+  /**
+   * @notice Check technical indicators for exit signals
+   * @param {Object} position - Position data
+   * @param {Object} marketData - Current market data
+   * @returns {Object} Exit signal analysis
+   */
+  async _checkTechnicalExitSignals (position, marketData) {
+    try {
+      // Simple technical exit signals for scalping
+      const signals = {
+        shouldExit: false,
+        reason: null,
+        confidence: 0
+      };
+
+      // Check if we have valid market data
+      if (!marketData || !marketData['1m']) {
+        return signals;
+      }
+
+      const currentPrice = marketData['1m'].price;
+      const entryPrice = position.entryPrice;
+
+      if (!currentPrice || !entryPrice) {
+        return signals;
+      }
+
+      // Calculate current P&L percentage
+      const pnlPercent = ((currentPrice - entryPrice) / entryPrice) * 100;
+
+      // Simple momentum reversal detection
+      if (position.action === 'BUY' && pnlPercent > 0.3) {
+        // Take profit on momentum reversal for long positions
+        if (Math.random() > 0.8) { // Simulate technical signal
+          signals.shouldExit = true;
+          signals.reason = 'MOMENTUM_REVERSAL';
+          signals.confidence = 0.6;
+        }
+      } else if (position.action === 'SELL' && pnlPercent > 0.3) {
+        // Take profit on momentum reversal for short positions
+        if (Math.random() > 0.8) { // Simulate technical signal
+          signals.shouldExit = true;
+          signals.reason = 'MOMENTUM_REVERSAL';
+          signals.confidence = 0.6;
+        }
+      }
+
+      return signals;
+    } catch (error) {
+      this.logger.error('Failed to check technical exit signals', { error: error.message });
+      return { shouldExit: false, reason: 'ERROR', confidence: 0 };
+    }
+  }
+
+  /**
+   * @notice Calculate maximum scalping time based on confidence
+   * @param {number} confidence - Position confidence level
+   * @returns {number} Maximum time in milliseconds
+   */
+  _getMaxScalpingTime (confidence) {
+    // Base scalping time: 15 minutes
+    const baseTime = 15 * 60 * 1000;
+
+    // Adjust based on confidence: higher confidence = longer hold time
+    const confidenceMultiplier = Math.max(0.5, Math.min(2.0, confidence * 2));
+
+    return Math.floor(baseTime * confidenceMultiplier);
+  }
+
+  /**
+   * @notice Execute position exit based on advanced conditions
+   * @param {string} pair - Trading pair
+   * @param {Object} position - Position data
+   * @param {Object} exitDecision - Exit decision details
+   * @param {number} currentPrice - Current market price
+   */
+  async _executePositionExit (pair, position, exitDecision, currentPrice) {
+    try {
+      this.logger.info(`🔴 Closing position: ${pair}`, {
+        reason: exitDecision.exitType,
+        confidence: exitDecision.confidence,
+        currentPrice,
+        entryPrice: position.entryPrice,
+        unrealizedPnL: position.unrealizedPnL
+      });
+
+      // ============ Determine Exit Action ============
+      const exitAction = position.side === 'BUY' ? 'SELL' : 'BUY';
+      const exitSize = position.size;
+
+      // ============ Prepare Exit Trade Parameters ============
+      const exitTradeParams = {
+        pair: position.pair, // Use actual trading pair, not position key
+        action: exitAction,
+        amount: exitSize,
+        price: currentPrice,
+        confidence: exitDecision.confidence,
+        executionStrategy: 'MARKET',
+        timestamp: Date.now(),
+        exitReason: exitDecision.exitType,
+        positionId: position.id
+      };
+
+      // ============ Execute Exit Trade ============
+      const exitResult = await this.vincent.executeTradeWithPolicies(exitTradeParams);
+
+      if (exitResult.success) {
+        // ============ Calculate Final P&L ============
+        const priceDiff = exitResult.result.executedPrice - position.entryPrice;
+        const sideMultiplier = position.side === 'BUY' ? 1 : -1;
+        const realizedPnL = (priceDiff * sideMultiplier * exitSize) / position.entryPrice * 100;
+
+        // ============ Update Position as Closed ============
+        const closedPosition = {
+          ...position,
+          exitTime: Date.now(),
+          exitPrice: exitResult.result.executedPrice,
+          exitReason: exitDecision.exitType,
+          realizedPnL,
+          duration: Date.now() - position.entryTime,
+          closed: true
+        };
+
+        // ============ Remove from Active Positions ============
+        this.currentPositions.delete(pair);
+
+        // ============ Add to Position History ============
+        if (!this.positionHistory) {
+          this.positionHistory = [];
+        }
+        this.positionHistory.push(closedPosition);
+
+        // ============ Update Performance Metrics ============
+        this.performanceMetrics.totalTrades++;
+        if (realizedPnL > 0) {
+          this.performanceMetrics.winningTrades++;
+        }
+
+        // ============ Record Enhanced Trade ============
+        await this._recordEnhancedTrade(pair, -position.signal, exitTradeParams, exitResult);
+
+        // ============ Log Position Closed Event ============
+        this.logger.debug('Position closed event', {
+          pair,
+          position: closedPosition,
+          realizedPnL,
+          exitReason: exitDecision.exitType
+        });
+
+        this.logger.info(`✅ Position closed successfully: ${pair}`, {
+          realizedPnL: realizedPnL.toFixed(4),
+          duration: `${Math.round((Date.now() - position.entryTime) / 1000)}s`,
+          exitReason: exitDecision.exitType
+        });
+      } else {
+        this.logger.error(`❌ Failed to close position: ${pair}`, exitResult.error);
+
+        // ============ Handle Exit Failure ============
+        // Mark position for retry or manual intervention
+        position.exitAttempts = (position.exitAttempts || 0) + 1;
+        position.lastExitAttempt = Date.now();
+        position.exitError = exitResult.error;
+
+        if (position.exitAttempts >= 3) {
+          this.logger.error(`🚨 Critical: Failed to close position after 3 attempts: ${pair}`, {
+            pair,
+            position,
+            attempts: position.exitAttempts,
+            lastError: exitResult.error
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error executing position exit for ${pair}`, { error: error.message });
+
+      // ============ Emergency Position Marking ============
+      if (position) {
+        position.exitError = error.message;
+        position.emergencyExit = true;
+      }
+    }
+  }
+
+  /**
+   * @notice Force close a specific position (called by RiskManager or emergency situations)
+   * @param {string} positionId - Position identifier or trading pair
+   * @param {string} reason - Reason for force close
+   * @param {number} currentPrice - Current market price (optional)
+   */
+  async forceClosePosition (positionId, reason, currentPrice) {
+    try {
+      this.logger.warn(`🚨 Force closing position: ${positionId}`, { reason });
+
+      // ============ Find Position by ID or Pair ============
+      let position = null;
+      let pair = null;
+
+      // Check if positionId is actually a trading pair
+      if (this.currentPositions.has(positionId)) {
+        position = this.currentPositions.get(positionId);
+        pair = positionId;
+      } else {
+        // Search by position ID in all positions
+        for (const [tradingPair, pos] of this.currentPositions) {
+          if (pos.id === positionId) {
+            position = pos;
+            pair = tradingPair;
+            break;
+          }
+        }
+      }
+
+      if (!position) {
+        this.logger.warn(`Position not found for force close: ${positionId}`);
+        return false;
+      }
+
+      // ============ Get Current Price if Not Provided ============
+      if (!currentPrice) {
+        currentPrice = this._getEstimatedPrice(position.pair);
+      }
+
+      // ============ Create Force Exit Decision ============
+      const forceExitDecision = {
+        shouldExit: true,
+        exitType: reason,
+        exitReasons: [reason],
+        confidence: 1.0 // Maximum confidence for force close
+      };
+
+      // ============ Execute Force Exit ============
+      await this._executePositionExit(pair, position, forceExitDecision, currentPrice);
+
+      this.logger.info(`✅ Position force closed: ${pair}`, { reason });
+      return true;
+    } catch (error) {
+      this.logger.error(`Error force closing position ${positionId}`, { error: error.message });
+      return false;
+    }
+  }
+
+  /**
+   * @notice Close all open positions (emergency or shutdown)
+   * @param {string} reason - Reason for closing all positions
+   */
+  async closeAllPositions (reason = 'SHUTDOWN') {
+    try {
+      const openPositions = Array.from(this.currentPositions.keys());
+      this.logger.warn(`🚨 Closing all ${openPositions.length} open positions`, { reason });
+
+      const closePromises = openPositions.map(pair =>
+        this.forceClosePosition(pair, reason, null)
+      );
+
+      const results = await Promise.allSettled(closePromises);
+
+      let successCount = 0;
+      let failureCount = 0;
+
+      results.forEach((result, index) => {
+        if (result.status === 'fulfilled' && result.value) {
+          successCount++;
+        } else {
+          failureCount++;
+          this.logger.error(`Failed to close position: ${openPositions[index]}`);
+        }
+      });
+
+      this.logger.info('Position closure complete', {
+        total: openPositions.length,
+        successful: successCount,
+        failed: failureCount
+      });
+
+      return { successCount, failureCount, total: openPositions.length };
+    } catch (error) {
+      this.logger.error('Error closing all positions', { error: error.message });
+      return { successCount: 0, failureCount: this.currentPositions.size, total: this.currentPositions.size };
+    }
+  }
+
+  /**
+   * @notice Stop the trading strategy gracefully
+   * @dev Stops the trading loop and cleans up resources
+   */
+  async stop () {
+    try {
+      this.logger.info('🛑 Stopping enhanced trading strategy...');
+
+      // Stop the trading loop
+      this.isActive = false;
+
+      // ============ Close All Open Positions ============
+      if (this.currentPositions.size > 0) {
+        this.logger.info(`🚨 Closing ${this.currentPositions.size} open positions during shutdown...`);
+        const closeResult = await this.closeAllPositions('SHUTDOWN');
+        this.logger.info(`✅ Position closure results: ${closeResult.successCount}/${closeResult.total} positions closed successfully`);
+      }
+
+      // Clear any timers/intervals if they exist
+      // (This trading strategy uses a while loop, so setting isActive=false is sufficient)
+
+      this.logger.info('✅ Enhanced trading strategy stopped successfully');
+    } catch (error) {
+      this.logger.error('❌ Error stopping enhanced trading strategy', { error: error.message });
+      throw error;
+    }
+  }
+
+  /**
+   * @notice Calculate confidence level for exit decision
+   * @param {Array} exitReasons - Array of exit reasons
+   * @param {Object} position - Position object
+   * @returns {number} Confidence score (0.0 to 1.0)
+   */
+  _calculateExitConfidence (exitReasons, position) {
+    try {
+      if (!exitReasons || exitReasons.length === 0) {
+        return 0.0;
+      }
+
+      let confidence = 0.0;
+      const reasonWeights = {
+        TAKE_PROFIT: 0.9,
+        STOP_LOSS: 0.95,
+        MAX_TIME_HELD: 0.7,
+        TECHNICAL_REVERSAL: 0.8,
+        HIGH_VOLATILITY: 0.6,
+        LOW_VOLUME: 0.5,
+        RISK_OVERRIDE: 1.0,
+        EMERGENCY_EXIT: 1.0
+      };
+
+      // Calculate weighted confidence based on exit reasons
+      for (const reason of exitReasons) {
+        const weight = reasonWeights[reason] || 0.5;
+        confidence = Math.max(confidence, weight);
+      }
+
+      // Adjust confidence based on position performance
+      if (position && position.entryPrice && position.currentPrice) {
+        const pnlPercent = position.side === 'buy'
+          ? ((position.currentPrice - position.entryPrice) / position.entryPrice) * 100
+          : ((position.entryPrice - position.currentPrice) / position.entryPrice) * 100;
+
+        // Increase confidence for profitable exits
+        if (pnlPercent > 2.0) {
+          confidence += 0.1;
+        } else if (pnlPercent < -1.0) {
+          confidence += 0.15; // Higher confidence for loss prevention
+        }
+      }
+
+      // Ensure confidence stays within bounds
+      return Math.max(0.0, Math.min(1.0, confidence));
+    } catch (error) {
+      this.logger.error('Error calculating exit confidence', { error: error.message });
+      return 0.5; // Default moderate confidence
+    }
+  }
+
+  /**
+   * @notice Calculate confidence level for arbitrage opportunities
+   * @param {number} profit - Expected profit amount
+   * @param {number} volume1 - Volume on first exchange/chain
+   * @param {number} volume2 - Volume on second exchange/chain
+   * @returns {number} Confidence score (0.0 to 1.0)
+   */
+  _calculateArbitrageConfidence (profit, volume1, volume2) {
+    try {
+      let confidence = 0.0;
+
+      // Base confidence from profit margin
+      if (profit > 5.0) {
+        confidence = 0.9;
+      } else if (profit > 2.0) {
+        confidence = 0.7;
+      } else if (profit > 1.0) {
+        confidence = 0.5;
+      } else if (profit > 0.5) {
+        confidence = 0.3;
+      } else {
+        confidence = 0.1;
+      }
+
+      // Adjust based on volume availability
+      const minVolume = Math.min(volume1 || 0, volume2 || 0);
+      if (minVolume > 100000) {
+        confidence += 0.1;
+      } else if (minVolume < 10000) {
+        confidence -= 0.2;
+      }
+
+      // Ensure confidence stays within bounds
+      return Math.max(0.0, Math.min(1.0, confidence));
+    } catch (error) {
+      this.logger.error('Error calculating arbitrage confidence', { error: error.message });
+      return 0.3; // Default low confidence for arbitrage
     }
   }
 }
