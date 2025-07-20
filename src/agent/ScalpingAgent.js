@@ -17,7 +17,7 @@ const AGENT_STATES = {
   ERROR: 'ERROR'
 };
 
-const COMPETITION_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+const COMPETITION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
 
 /**
  * @title ScalpingAgent

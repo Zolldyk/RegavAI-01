@@ -282,3 +282,6 @@ test-full-trading-agent*.js
 # Competition and deployment scripts (may contain sensitive configs)
 start-competition.sh
 scripts/deploy-pinata.js
+
+# Technical documentation (contains detailed implementation information)
+TECHNICAL_WHITEPAPER.md

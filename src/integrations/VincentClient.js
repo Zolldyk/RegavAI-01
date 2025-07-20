@@ -650,7 +650,7 @@ class VincentClient extends EventEmitter {
           expiryTimeSeconds: this.config.tradeExpiryMinutes ? this.config.tradeExpiryMinutes * 60 : 600, // 10 minutes default
           allowedChains: [1, 10, 42161, 8453, 137],
           enforceStrictExpiry: true,
-          maxExpiryTimeSeconds: 3600, // 1 hour max
+          maxExpiryTimeSeconds: 86400, // 24 hours max
           minExpiryTimeSeconds: 60, // 1 minute min
           competitionMode: true
         },
@@ -658,7 +658,7 @@ class VincentClient extends EventEmitter {
           expiryTimeSeconds: this.config.tradeExpiryMinutes ? this.config.tradeExpiryMinutes * 60 : 600,
           allowedChains: [1, 10, 42161, 8453, 137],
           enforceStrictExpiry: true,
-          maxExpiryTimeSeconds: 3600,
+          maxExpiryTimeSeconds: 86400,
           minExpiryTimeSeconds: 60
         },
         isActive: true,
@@ -674,7 +674,7 @@ class VincentClient extends EventEmitter {
           maxExpiryMinutes: this.config.tradeExpiryMinutes || 10,
           allowedHours: { start: 0, end: 24 }, // 24/7 for competition
           competitionStartTime: Date.now(),
-          competitionDuration: 3600000, // 1 hour
+          competitionDuration: 86400000, // 24 hours
           emergencyStopEnabled: true
         },
         isActive: true,

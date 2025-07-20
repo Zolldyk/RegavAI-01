@@ -324,7 +324,7 @@ Always respond in valid JSON format with specific execution parameters.`
 
 TRADING PAIRS: ${pairsArray.join(', ')}
 CURRENT TIME: ${currentTime}
-COMPETITION TIMEFRAME: 1 hour maximum
+COMPETITION TIMEFRAME: 24 hours maximum
 STRATEGY FOCUS: Scalping (1-5 minute holds)
 
 CURRENT MARKET CONTEXT:
@@ -377,7 +377,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
     },
     "newsImpact": {
         "level": "low|medium|high",
-        "timeframe": "immediate|15min|1hour",
+        "timeframe": "immediate|15min|1hour|24hour",
         "description": "Brief description of news impact"
     },
     "riskWarnings": ["Market manipulation detected", "Low liquidity period"],
@@ -552,7 +552,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
 
 CURRENT TIME: ${currentTime}
 TRADING STRATEGY: High-frequency scalping (1-5 minute holds)
-COMPETITION TIMEFRAME: 1 hour maximum
+COMPETITION TIMEFRAME: 24 hours maximum
 
 PORTFOLIO STATE:
 - Total Portfolio Value: $${portfolioData.totalValue || 10000}

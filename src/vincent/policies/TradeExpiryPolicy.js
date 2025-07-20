@@ -19,7 +19,7 @@ const userParamsSchema = z.object({
   expiryTimeSeconds: z.number().default(600), // 10 minutes default
   allowedChains: z.array(z.number()).default([1, 10, 42161, 8453, 137]), // Multi-chain support
   enforceStrictExpiry: z.boolean().default(true), // Strict enforcement
-  maxExpiryTimeSeconds: z.number().default(3600), // Maximum 1 hour
+  maxExpiryTimeSeconds: z.number().default(86400), // Maximum 24 hours
   minExpiryTimeSeconds: z.number().default(60), // Minimum 1 minute
   orderTypeExpiryOverrides: z.object({
     market: z.number().optional(),

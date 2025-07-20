@@ -74,7 +74,7 @@ const __dirname = dirname(__filename);
 dotenv.config({ path: join(__dirname, '.env') });
 
 // ============ Global Constants ============
-const COMPETITION_DURATION = 3600000; // 1 hour in milliseconds
+const COMPETITION_DURATION = 86400000; // 24 hours in milliseconds
 const SHUTDOWN_TIMEOUT = 30000; // 30 seconds for graceful shutdown
 const HEALTH_CHECK_INTERVAL = 60000; // 1 minute health checks
 
