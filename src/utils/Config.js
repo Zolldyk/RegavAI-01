@@ -345,13 +345,13 @@ class ConfigManager {
       }).required(),
 
       gaia: Joi.object({
-        apiKey: Joi.string().required(),
-        baseUrl: Joi.string().uri().required(),
-        model: Joi.string().required(),
-        embeddingModel: Joi.string().required(),
+        apiKey: Joi.string().allow(null).optional(),
+        baseUrl: Joi.string().uri().allow(null).optional(),
+        model: Joi.string().allow(null).optional(),
+        embeddingModel: Joi.string().allow(null).optional(),
         sentimentNodeUrl: Joi.string().uri().allow(null),
         marketAnalysisNodeUrl: Joi.string().uri().allow(null)
-      }).required(),
+      }).optional(),
 
       trading: Joi.object({
         maxPositionSizeUsd: Joi.number().positive().required(),

@@ -235,13 +235,18 @@ export class ScalpingAgent {
       });
       await this.vincentClient.initialize();
 
-      // ============ Initialize Gaia Client ============
-      this.gaiaClient = new GaiaClient({
-        apiKey: this.config.GAIA_API_KEY || process.env.GAIA_API_KEY,
-        nodeUrl: this.config.GAIA_NODE_URL || process.env.GAIA_NODE_URL,
-        model: this.config.GAIA_MODEL || process.env.GAIA_MODEL
-      });
-      await this.gaiaClient.initialize();
+      // ============ Initialize Gaia Client (Optional) ============
+      if (process.env.GAIA_API_KEY) {
+        this.gaiaClient = new GaiaClient({
+          apiKey: this.config.GAIA_API_KEY || process.env.GAIA_API_KEY,
+          nodeUrl: this.config.GAIA_NODE_URL || process.env.GAIA_NODE_URL,
+          model: this.config.GAIA_MODEL || process.env.GAIA_MODEL
+        });
+        await this.gaiaClient.initialize();
+      } else {
+        this.gaiaClient = null;
+        this.logger.warn('⚠️ Gaia AI client disabled - no API key provided');
+      }
 
       this.logger.info('All service clients initialized successfully');
     } catch (error) {
@@ -1085,8 +1090,8 @@ export class ScalpingAgent {
 
       // ============ Simplified Health Check (bypass for IPFS testing) ============
       // Check basic initialization status only
-      if (!this.recallClient || !this.vincentClient || !this.gaiaClient) {
-        throw new Error('One or more clients not initialized');
+      if (!this.recallClient || !this.vincentClient) {
+        throw new Error('One or more required clients not initialized');
       }
 
       this.logger.info('Health check passed - all systems operational');
