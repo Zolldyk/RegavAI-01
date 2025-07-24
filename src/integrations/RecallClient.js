@@ -727,7 +727,7 @@ class RecallClient extends EventEmitter {
      */
   async getPortfolio () {
     try {
-      const portfolioResponse = await this._makeApiCall('GET', '/api/agent/portfolio');
+      const portfolioResponse = await this._makeApiCall('GET', '/api/agent/balances');
 
       if (!portfolioResponse.success) {
         throw new Error('Failed to get portfolio data');

@@ -84,7 +84,7 @@ class RecallAccountVerifier {
      */
   async getPortfolio () {
     try {
-      const response = await this.client.get('/api/agent/portfolio');
+      const response = await this.client.get('/api/agent/balances');
       return response.data;
     } catch (error) {
       console.error('Failed to fetch portfolio:', error.message);

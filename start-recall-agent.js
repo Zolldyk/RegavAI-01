@@ -90,9 +90,17 @@ class RecallTradingAgent {
 
       // ============ Verify Account Status ============
       const portfolio = await this.recallClient.getPortfolio();
+      
+      // Debug: Log the actual response structure
+      this.logger.info('🔍 Portfolio Response Structure:', {
+        keys: Object.keys(portfolio || {}),
+        fullResponse: portfolio
+      });
+      
       this.logger.info('💰 Portfolio Status:', {
-        totalValue: portfolio.totalValue,
-        tokenCount: portfolio.tokens.length
+        totalValue: portfolio?.totalValue || portfolio?.totalBalanceUsd || 0,
+        tokenCount: portfolio?.tokens?.length || portfolio?.balances?.length || 0,
+        balances: portfolio?.balances || portfolio?.tokens || 'No balances data'
       });
 
       this.logger.info('🎉 Recall Trading Agent initialized successfully!');
