@@ -193,7 +193,9 @@ class RecallClient extends EventEmitter {
   async _connectToNetwork () {
     try {
       // ============ Test API Connection ============
-      const healthCheck = await this._makeApiCall('GET', '/api/health');
+      // Use different endpoint structure for sandbox vs production
+      const healthEndpoint = this.config.network === 'testnet' ? '/health' : '/api/health';
+      const healthCheck = await this._makeApiCall('GET', healthEndpoint);
 
       if (healthCheck.status !== 'ok') {
         throw new Error('Recall API health check failed');
@@ -666,7 +668,7 @@ class RecallClient extends EventEmitter {
       toToken: action === 'BUY' ? tokenAddresses.base : tokenAddresses.quote,
       amount: amount.toString(),
       reason: reason || `Scalping AI trade: ${action} ${amount} ${pair}${price ? ` at ${price}` : ''}`,
-      slippageTolerance: (slippage * 100).toString(), // Convert to percentage string
+      slippageTolerance: slippage.toString(), // Already in decimal format (0.005 = 0.5%)
       ...(price && orderType === 'LIMIT' && { limitPrice: price.toString() })
     };
   }
